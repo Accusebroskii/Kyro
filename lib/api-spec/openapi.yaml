@@ -3,13 +3,27 @@ info:
   # Do not change the title, if the title changes, the import paths will be broken
   title: Api
   version: 0.1.0
-  description: API specification
+  description: Discord Bot Dashboard API
 servers:
   - url: /api
     description: Base API path
 tags:
   - name: health
     description: Health operations
+  - name: bot
+    description: Bot status and info
+  - name: guilds
+    description: Guild management
+  - name: moderation
+    description: Moderation actions and logs
+  - name: tickets
+    description: Ticket system
+  - name: modmail
+    description: ModMail system
+  - name: config
+    description: Guild configuration
+  - name: reports
+    description: Bug reports and player reports
 paths:
   /healthz:
     get:
@@ -24,6 +38,384 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/HealthStatus"
+
+  /bot/status:
+    get:
+      operationId: getBotStatus
+      tags: [bot]
+      summary: Get bot status
+      description: Returns current bot online status, uptime, guild count, and command count
+      responses:
+        "200":
+          description: Bot status
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/BotStatus"
+
+  /guilds:
+    get:
+      operationId: listGuilds
+      tags: [guilds]
+      summary: List all configured guilds
+      responses:
+        "200":
+          description: List of guilds
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Guild"
+
+  /guilds/{guildId}:
+    get:
+      operationId: getGuild
+      tags: [guilds]
+      summary: Get guild details
+      parameters:
+        - name: guildId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Guild details
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Guild"
+        "404":
+          description: Guild not found
+
+  /guilds/{guildId}/stats:
+    get:
+      operationId: getGuildStats
+      tags: [guilds]
+      summary: Get guild statistics summary
+      parameters:
+        - name: guildId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Guild stats
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/GuildStats"
+
+  /guilds/{guildId}/config:
+    get:
+      operationId: getGuildConfig
+      tags: [config]
+      summary: Get guild configuration
+      parameters:
+        - name: guildId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Guild config
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/GuildConfig"
+        "404":
+          description: Config not found
+    patch:
+      operationId: updateGuildConfig
+      tags: [config]
+      summary: Update guild configuration
+      parameters:
+        - name: guildId
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/GuildConfigUpdate"
+      responses:
+        "200":
+          description: Updated config
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/GuildConfig"
+
+  /guilds/{guildId}/mod-logs:
+    get:
+      operationId: listModLogs
+      tags: [moderation]
+      summary: List moderation logs for a guild
+      parameters:
+        - name: guildId
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: limit
+          in: query
+          schema:
+            type: integer
+        - name: offset
+          in: query
+          schema:
+            type: integer
+        - name: action
+          in: query
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Moderation logs
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/ModLog"
+
+  /guilds/{guildId}/warnings:
+    get:
+      operationId: listWarnings
+      tags: [moderation]
+      summary: List warnings for a guild
+      parameters:
+        - name: guildId
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: userId
+          in: query
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Warnings list
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Warning"
+
+  /guilds/{guildId}/tickets:
+    get:
+      operationId: listTickets
+      tags: [tickets]
+      summary: List tickets for a guild
+      parameters:
+        - name: guildId
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: status
+          in: query
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Tickets list
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Ticket"
+
+  /guilds/{guildId}/tickets/{ticketId}:
+    get:
+      operationId: getTicket
+      tags: [tickets]
+      summary: Get a ticket by ID
+      parameters:
+        - name: guildId
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: ticketId
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Ticket details
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Ticket"
+        "404":
+          description: Ticket not found
+
+  /guilds/{guildId}/modmail:
+    get:
+      operationId: listModmailThreads
+      tags: [modmail]
+      summary: List ModMail threads for a guild
+      parameters:
+        - name: guildId
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: status
+          in: query
+          schema:
+            type: string
+      responses:
+        "200":
+          description: ModMail threads
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/ModmailThread"
+
+  /guilds/{guildId}/modmail/{threadId}:
+    get:
+      operationId: getModmailThread
+      tags: [modmail]
+      summary: Get a ModMail thread
+      parameters:
+        - name: guildId
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: threadId
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: ModMail thread
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ModmailThread"
+        "404":
+          description: Thread not found
+
+  /guilds/{guildId}/reports:
+    get:
+      operationId: listReports
+      tags: [reports]
+      summary: List all reports for a guild
+      parameters:
+        - name: guildId
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: type
+          in: query
+          schema:
+            type: string
+        - name: status
+          in: query
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Reports list
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Report"
+
+  /guilds/{guildId}/reports/{reportId}:
+    get:
+      operationId: getReport
+      tags: [reports]
+      summary: Get a specific report
+      parameters:
+        - name: guildId
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: reportId
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Report details
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Report"
+        "404":
+          description: Not found
+    patch:
+      operationId: updateReport
+      tags: [reports]
+      summary: Update report status
+      parameters:
+        - name: guildId
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: reportId
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ReportUpdate"
+      responses:
+        "200":
+          description: Updated report
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Report"
+
+  /guilds/{guildId}/auto-roles:
+    get:
+      operationId: listAutoRoles
+      tags: [config]
+      summary: List auto roles for a guild
+      parameters:
+        - name: guildId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Auto roles
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/AutoRole"
+
 components:
   schemas:
     HealthStatus:
@@ -34,3 +426,318 @@ components:
       required:
         - status
 
+    BotStatus:
+      type: object
+      required: [online, uptime, guildCount, userCount, commandCount, latency]
+      properties:
+        online:
+          type: boolean
+        uptime:
+          type: integer
+          description: Uptime in seconds
+        guildCount:
+          type: integer
+        userCount:
+          type: integer
+        commandCount:
+          type: integer
+        latency:
+          type: integer
+          description: Latency in ms
+        tag:
+          type: ["string", "null"]
+
+    Guild:
+      type: object
+      required: [id, guildId, name, createdAt]
+      properties:
+        id:
+          type: integer
+        guildId:
+          type: string
+        name:
+          type: string
+        iconUrl:
+          type: ["string", "null"]
+        memberCount:
+          type: ["integer", "null"]
+        createdAt:
+          type: string
+
+    GuildStats:
+      type: object
+      required: [totalWarnings, totalBans, totalKicks, openTickets, closedTickets, openModmail, closedModmail, openReports, recentActions]
+      properties:
+        totalWarnings:
+          type: integer
+        totalBans:
+          type: integer
+        totalKicks:
+          type: integer
+        totalMutes:
+          type: integer
+        openTickets:
+          type: integer
+        closedTickets:
+          type: integer
+        openModmail:
+          type: integer
+        closedModmail:
+          type: integer
+        openReports:
+          type: integer
+        recentActions:
+          type: array
+          items:
+            $ref: "#/components/schemas/ModLog"
+
+    GuildConfig:
+      type: object
+      required: [id, guildId, createdAt, updatedAt]
+      properties:
+        id:
+          type: integer
+        guildId:
+          type: string
+        welcomeChannelId:
+          type: ["string", "null"]
+        welcomeMessage:
+          type: ["string", "null"]
+        logChannelId:
+          type: ["string", "null"]
+        modLogChannelId:
+          type: ["string", "null"]
+        ticketCategoryId:
+          type: ["string", "null"]
+        ticketLogChannelId:
+          type: ["string", "null"]
+        modmailForumId:
+          type: ["string", "null"]
+        muteRoleId:
+          type: ["string", "null"]
+        modRoleId:
+          type: ["string", "null"]
+        adminRoleId:
+          type: ["string", "null"]
+        antispamEnabled:
+          type: boolean
+        antiRaidEnabled:
+          type: boolean
+        automodEnabled:
+          type: boolean
+        maxWarnings:
+          type: integer
+        createdAt:
+          type: string
+        updatedAt:
+          type: string
+
+    GuildConfigUpdate:
+      type: object
+      properties:
+        welcomeChannelId:
+          type: ["string", "null"]
+        welcomeMessage:
+          type: ["string", "null"]
+        logChannelId:
+          type: ["string", "null"]
+        modLogChannelId:
+          type: ["string", "null"]
+        ticketCategoryId:
+          type: ["string", "null"]
+        ticketLogChannelId:
+          type: ["string", "null"]
+        modmailForumId:
+          type: ["string", "null"]
+        muteRoleId:
+          type: ["string", "null"]
+        modRoleId:
+          type: ["string", "null"]
+        adminRoleId:
+          type: ["string", "null"]
+        antispamEnabled:
+          type: boolean
+        antiRaidEnabled:
+          type: boolean
+        automodEnabled:
+          type: boolean
+        maxWarnings:
+          type: integer
+
+    ModLog:
+      type: object
+      required: [id, guildId, action, targetId, targetTag, moderatorId, moderatorTag, createdAt]
+      properties:
+        id:
+          type: integer
+        guildId:
+          type: string
+        action:
+          type: string
+          description: "ban | kick | mute | unmute | warn | timeout | untimeout | purge | lock | unlock"
+        targetId:
+          type: string
+        targetTag:
+          type: string
+        moderatorId:
+          type: string
+        moderatorTag:
+          type: string
+        reason:
+          type: ["string", "null"]
+        duration:
+          type: ["string", "null"]
+        createdAt:
+          type: string
+
+    Warning:
+      type: object
+      required: [id, guildId, userId, userTag, moderatorId, moderatorTag, reason, createdAt]
+      properties:
+        id:
+          type: integer
+        guildId:
+          type: string
+        userId:
+          type: string
+        userTag:
+          type: string
+        moderatorId:
+          type: string
+        moderatorTag:
+          type: string
+        reason:
+          type: string
+        active:
+          type: boolean
+        createdAt:
+          type: string
+
+    Ticket:
+      type: object
+      required: [id, guildId, ticketNumber, userId, userTag, status, createdAt]
+      properties:
+        id:
+          type: integer
+        guildId:
+          type: string
+        ticketNumber:
+          type: integer
+        userId:
+          type: string
+        userTag:
+          type: string
+        subject:
+          type: ["string", "null"]
+        channelId:
+          type: ["string", "null"]
+        status:
+          type: string
+          description: "open | closed"
+        claimedBy:
+          type: ["string", "null"]
+        claimedByTag:
+          type: ["string", "null"]
+        closedBy:
+          type: ["string", "null"]
+        closedReason:
+          type: ["string", "null"]
+        createdAt:
+          type: string
+        closedAt:
+          type: ["string", "null"]
+
+    ModmailThread:
+      type: object
+      required: [id, guildId, userId, userTag, status, createdAt]
+      properties:
+        id:
+          type: integer
+        guildId:
+          type: string
+        userId:
+          type: string
+        userTag:
+          type: string
+        subject:
+          type: ["string", "null"]
+        threadChannelId:
+          type: ["string", "null"]
+        status:
+          type: string
+          description: "open | closed"
+        closedBy:
+          type: ["string", "null"]
+        closedReason:
+          type: ["string", "null"]
+        createdAt:
+          type: string
+        closedAt:
+          type: ["string", "null"]
+
+    Report:
+      type: object
+      required: [id, guildId, type, userId, userTag, title, description, status, createdAt]
+      properties:
+        id:
+          type: integer
+        guildId:
+          type: string
+        type:
+          type: string
+          description: "bug | player | support"
+        userId:
+          type: string
+        userTag:
+          type: string
+        title:
+          type: string
+        description:
+          type: string
+        reportedUserId:
+          type: ["string", "null"]
+        reportedUserTag:
+          type: ["string", "null"]
+        serverName:
+          type: ["string", "null"]
+        priority:
+          type: string
+          description: "low | medium | high | critical"
+        status:
+          type: string
+          description: "open | in_progress | resolved | closed"
+        assignedTo:
+          type: ["string", "null"]
+        resolution:
+          type: ["string", "null"]
+        createdAt:
+          type: string
+        updatedAt:
+          type: string
+
+    ReportUpdate:
+      type: object
+      properties:
+        status:
+          type: string
+        assignedTo:
+          type: ["string", "null"]
+        resolution:
+          type: ["string", "null"]
+        priority:
+          type: string
+
+    AutoRole:
+      type: object
+      required: [id, guildId, roleId, roleName, createdAt]
+      properties:
+        id:
+          type: integer
+        guildId:
+          type: string
+        roleId:
+          type: string
+        roleName:
+          type: string
+        createdAt:
+          type: string

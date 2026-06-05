@@ -1,0 +1,2 @@
+- [Discord bot music build](discord-music-build.md) — audio packages must be esbuild externals; system FFmpeg handles transcoding
+- [DB schema rebuild rule](db-schema-rebuild.md) — after schema changes, run typecheck:libs before leaf package typechecks

@@ -29,6 +29,21 @@ async function buildAll() {
     // - use path traversal to read files (e.g. @google-cloud/secret-manager loads sibling .proto files)
     external: [
       "*.node",
+      // Discord voice / music stack — contain native modules or dynamic requires
+      "@discordjs/voice",
+      "play-dl",
+      "play-audio",
+      "play-opus",
+      "opusscript",
+      "@discordjs/opus",
+      "sodium",
+      "sodium-native",
+      "libsodium-wrappers",
+      "ffmpeg-static",
+      "prism-media",
+      "@snazzah/davey",
+      "@snazzah/davey-linux-x64-gnu",
+      // Standard exclusions
       "sharp",
       "better-sqlite3",
       "sqlite3",
