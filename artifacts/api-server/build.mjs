@@ -31,9 +31,8 @@ async function buildAll() {
       "*.node",
       // Discord voice / music stack — contain native modules or dynamic requires
       "@discordjs/voice",
-      "play-dl",
-      "play-audio",
-      "play-opus",
+      "@distube/ytdl-core",
+      "youtube-sr",
       "opusscript",
       "@discordjs/opus",
       "sodium",

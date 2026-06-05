@@ -9,15 +9,16 @@ import {
   entersState,
   VoiceConnectionStatus,
   AudioResource,
+  StreamType,
 } from "@discordjs/voice";
 import {
   Guild,
   TextChannel,
   VoiceBasedChannel,
-  EmbedBuilder,
 } from "discord.js";
-import playdl from "play-dl";
-import { musicEmbed, errorEmbed } from "./embeds.js";
+import ytdl from "@distube/ytdl-core";
+import YouTube from "youtube-sr";
+import { musicEmbed } from "./embeds.js";
 import { logger } from "../../lib/logger.js";
 
 export interface Song {
@@ -56,41 +57,41 @@ function formatDuration(seconds: number): string {
 
 export async function searchSongs(query: string, limit = 5): Promise<Song[]> {
   try {
-    const type = playdl.yt_validate(query);
-    if (type === "video") {
-      const info = await playdl.video_info(query);
+    if (ytdl.validateURL(query)) {
+      const info = await ytdl.getBasicInfo(query);
+      const d = info.videoDetails;
       return [
         {
-          title: info.video_details.title ?? "Unknown",
-          url: info.video_details.url,
-          duration: formatDuration(info.video_details.durationInSec),
-          thumbnail: info.video_details.thumbnails?.[0]?.url ?? "",
+          title: d.title ?? "Unknown",
+          url: d.video_url,
+          duration: formatDuration(parseInt(d.lengthSeconds, 10)),
+          thumbnail: d.thumbnails?.[0]?.url ?? "",
           requestedBy: "",
           requestedById: "",
         },
       ];
     }
-    if (type === "playlist") {
-      const pl = await playdl.playlist_info(query, { incomplete: true });
-      const videos = await pl.all_videos();
-      return videos.slice(0, 50).map((v) => ({
-        title: v.title ?? "Unknown",
-        url: v.url ?? `https://www.youtube.com/watch?v=${v.id}`,
-        duration: formatDuration(v.durationInSec),
-        thumbnail: v.thumbnails?.[0]?.url ?? "",
-        requestedBy: "",
-        requestedById: "",
-      }));
+
+    if (query.includes("list=")) {
+      const playlist = await YouTube.getPlaylist(query, { fetchAll: true });
+      if (playlist) {
+        return playlist.videos.slice(0, 50).map((v) => ({
+          title: v.title ?? "Unknown",
+          url: v.url,
+          duration: v.durationFormatted ?? "0:00",
+          thumbnail: v.thumbnail?.url ?? "",
+          requestedBy: "",
+          requestedById: "",
+        }));
+      }
     }
-    const results = await playdl.search(query, {
-      limit,
-      source: { youtube: "video" },
-    });
+
+    const results = await YouTube.search(query, { limit, type: "video" });
     return results.map((v) => ({
       title: v.title ?? "Unknown",
-      url: v.url ?? `https://www.youtube.com/watch?v=${v.id}`,
-      duration: formatDuration(v.durationInSec),
-      thumbnail: v.thumbnails?.[0]?.url ?? "",
+      url: v.url,
+      duration: v.durationFormatted ?? "0:00",
+      thumbnail: v.thumbnail?.url ?? "",
       requestedBy: "",
       requestedById: "",
     }));
@@ -126,9 +127,14 @@ async function playNext(guildId: string): Promise<void> {
   if (!song) return;
 
   try {
-    const stream = await playdl.stream(song.url, { quality: 2 });
-    const resource = createAudioResource(stream.stream, {
-      inputType: stream.type,
+    const stream = ytdl(song.url, {
+      filter: "audioonly",
+      quality: "highestaudio",
+      highWaterMark: 1 << 25,
+    });
+
+    const resource = createAudioResource(stream, {
+      inputType: StreamType.Arbitrary,
       inlineVolume: true,
     });
     resource.volume?.setVolume(queue.volume / 100);
