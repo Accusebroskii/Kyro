@@ -6,7 +6,7 @@ import { getAllCommands } from "../commands/index.js";
 export async function onReady(client: Client): Promise<void> {
   logger.info({ tag: client.user?.tag }, "Bot is ready");
 
-  client.user?.setActivity("your server | /help", { type: ActivityType.Watching });
+  client.user?.setActivity("Area12", { type: ActivityType.Watching });
 
   const commands = getAllCommands();
   const commandData = commands.map((c) => c.data.toJSON());
