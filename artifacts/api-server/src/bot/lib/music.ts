@@ -75,7 +75,7 @@ export async function searchSongs(query: string, limit = 5): Promise<Song[]> {
       const videos = await pl.all_videos();
       return videos.slice(0, 50).map((v) => ({
         title: v.title ?? "Unknown",
-        url: v.url,
+        url: v.url ?? `https://www.youtube.com/watch?v=${v.id}`,
         duration: formatDuration(v.durationInSec),
         thumbnail: v.thumbnails?.[0]?.url ?? "",
         requestedBy: "",
@@ -88,7 +88,7 @@ export async function searchSongs(query: string, limit = 5): Promise<Song[]> {
     });
     return results.map((v) => ({
       title: v.title ?? "Unknown",
-      url: v.url,
+      url: v.url ?? `https://www.youtube.com/watch?v=${v.id}`,
       duration: formatDuration(v.durationInSec),
       thumbnail: v.thumbnails?.[0]?.url ?? "",
       requestedBy: "",
