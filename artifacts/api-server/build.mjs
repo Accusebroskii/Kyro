@@ -33,6 +33,7 @@ async function buildAll() {
       "@discordjs/voice",
       "@distube/ytdl-core",
       "youtube-sr",
+      "play-dl",
       "opusscript",
       "@discordjs/opus",
       "sodium",

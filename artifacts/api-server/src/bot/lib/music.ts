@@ -16,8 +16,7 @@ import {
   TextChannel,
   VoiceBasedChannel,
 } from "discord.js";
-import ytdl from "@distube/ytdl-core";
-import YouTube from "youtube-sr";
+import play from "play-dl";
 import { musicEmbed } from "./embeds.js";
 import { logger } from "../../lib/logger.js";
 
@@ -57,14 +56,15 @@ function formatDuration(seconds: number): string {
 
 export async function searchSongs(query: string, limit = 5): Promise<Song[]> {
   try {
-    if (ytdl.validateURL(query)) {
-      const info = await ytdl.getBasicInfo(query);
-      const d = info.videoDetails;
+    // YouTube URL — single video
+    if (play.yt_validate(query) === "video") {
+      const info = await play.video_info(query);
+      const d = info.video_details;
       return [
         {
           title: d.title ?? "Unknown",
-          url: d.video_url,
-          duration: formatDuration(parseInt(d.lengthSeconds, 10)),
+          url: d.url,
+          duration: formatDuration(d.durationInSec),
           thumbnail: d.thumbnails?.[0]?.url ?? "",
           requestedBy: "",
           requestedById: "",
@@ -72,26 +72,27 @@ export async function searchSongs(query: string, limit = 5): Promise<Song[]> {
       ];
     }
 
-    if (query.includes("list=")) {
-      const playlist = await YouTube.getPlaylist(query, { fetchAll: true });
-      if (playlist) {
-        return playlist.videos.slice(0, 50).map((v) => ({
-          title: v.title ?? "Unknown",
-          url: v.url,
-          duration: v.durationFormatted ?? "0:00",
-          thumbnail: v.thumbnail?.url ?? "",
-          requestedBy: "",
-          requestedById: "",
-        }));
-      }
+    // YouTube playlist URL
+    if (play.yt_validate(query) === "playlist") {
+      const playlist = await play.playlist_info(query, { incomplete: true });
+      const videos = await playlist.all_videos();
+      return videos.slice(0, 50).map((v) => ({
+        title: v.title ?? "Unknown",
+        url: v.url,
+        duration: formatDuration(v.durationInSec),
+        thumbnail: v.thumbnails?.[0]?.url ?? "",
+        requestedBy: "",
+        requestedById: "",
+      }));
     }
 
-    const results = await YouTube.search(query, { limit, type: "video" });
+    // Text search
+    const results = await play.search(query, { source: { youtube: "video" }, limit });
     return results.map((v) => ({
       title: v.title ?? "Unknown",
       url: v.url,
-      duration: v.durationFormatted ?? "0:00",
-      thumbnail: v.thumbnail?.url ?? "",
+      duration: formatDuration(v.durationInSec),
+      thumbnail: v.thumbnails?.[0]?.url ?? "",
       requestedBy: "",
       requestedById: "",
     }));
@@ -127,14 +128,10 @@ async function playNext(guildId: string): Promise<void> {
   if (!song) return;
 
   try {
-    const stream = ytdl(song.url, {
-      filter: "audioonly",
-      quality: "highestaudio",
-      highWaterMark: 1 << 25,
-    });
+    const source = await play.stream(song.url, { quality: 2 });
 
-    const resource = createAudioResource(stream, {
-      inputType: StreamType.Arbitrary,
+    const resource = createAudioResource(source.stream, {
+      inputType: source.type as StreamType,
       inlineVolume: true,
     });
     resource.volume?.setVolume(queue.volume / 100);
@@ -214,8 +211,17 @@ export async function joinAndPlay(
         }
       });
 
-      conn.on(VoiceConnectionStatus.Disconnected, () => {
-        queues.delete(guild.id);
+      conn.on(VoiceConnectionStatus.Disconnected, async () => {
+        try {
+          // Try to reconnect if briefly disconnected
+          await Promise.race([
+            entersState(conn!, VoiceConnectionStatus.Signalling, 5_000),
+            entersState(conn!, VoiceConnectionStatus.Connecting, 5_000),
+          ]);
+        } catch {
+          queues.delete(guild.id);
+          conn!.destroy();
+        }
       });
     }
 

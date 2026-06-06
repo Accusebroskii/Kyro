@@ -80,7 +80,6 @@ export function createBotClient(): Client {
         const threadChannel = guild.channels.cache.get(existing.threadChannelId) as TextChannel | undefined;
         if (threadChannel) {
           await threadChannel.send(`**${user.tag}:** ${content}`);
-          await message.channel.send("Your message has been forwarded to staff.");
           return;
         }
       }
