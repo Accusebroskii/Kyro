@@ -17,6 +17,7 @@ import {
   VoiceBasedChannel,
 } from "discord.js";
 import play from "play-dl";
+import ytdl from "@distube/ytdl-core";
 import { musicEmbed } from "./embeds.js";
 import { logger } from "../../lib/logger.js";
 
@@ -128,10 +129,20 @@ async function playNext(guildId: string): Promise<void> {
   if (!song) return;
 
   try {
-    const source = await play.stream(song.url, { quality: 2 });
+    const stream = ytdl(song.url, {
+      filter: "audioonly",
+      quality: "highestaudio",
+      highWaterMark: 1 << 25,
+      requestOptions: {
+        headers: {
+          "User-Agent":
+            "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+        },
+      },
+    });
 
-    const resource = createAudioResource(source.stream, {
-      inputType: source.type as StreamType,
+    const resource = createAudioResource(stream, {
+      inputType: StreamType.Arbitrary,
       inlineVolume: true,
     });
     resource.volume?.setVolume(queue.volume / 100);
