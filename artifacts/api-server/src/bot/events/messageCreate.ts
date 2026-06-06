@@ -1,6 +1,6 @@
-import { Message, TextChannel } from "discord.js";
-import { db, guildConfigTable } from "@workspace/db";
-import { eq } from "drizzle-orm";
+import { Message, TextChannel, GuildMember } from "discord.js";
+import { db, guildConfigTable, modmailTable } from "@workspace/db";
+import { eq, and } from "drizzle-orm";
 import { logger } from "../../lib/logger.js";
 
 const spamTracker = new Map<string, { count: number; lastMessage: number; warned: boolean }>();
@@ -10,6 +10,40 @@ export async function onMessageCreate(message: Message): Promise<void> {
 
   const guildId = message.guild.id;
 
+  // ModMail: if a staff member types in a modmail thread, forward it to the user
+  try {
+    const [thread] = await db
+      .select()
+      .from(modmailTable)
+      .where(
+        and(
+          eq(modmailTable.guildId, guildId),
+          eq(modmailTable.threadChannelId, message.channelId),
+          eq(modmailTable.status, "open"),
+        ),
+      )
+      .limit(1);
+
+    if (thread) {
+      // This is a modmail thread — forward the message to the user
+      try {
+        const user = await message.client.users.fetch(thread.userId);
+        const member = message.member as GuildMember;
+        const senderName = member?.displayName ?? message.author.username;
+        await user.send(`**${senderName} (Staff):** ${message.content}`);
+      } catch (err) {
+        logger.warn({ err }, "Failed to forward modmail reply to user");
+        (message.channel as TextChannel)
+          .send("⚠️ Could not deliver your message — the user's DMs may be closed.")
+          .catch(() => {});
+      }
+      return;
+    }
+  } catch (err) {
+    logger.error({ err }, "Error in modmail messageCreate handler");
+  }
+
+  // Antispam
   try {
     const [config] = await db
       .select()
