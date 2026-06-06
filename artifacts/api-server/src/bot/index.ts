@@ -15,6 +15,7 @@ import { onInteractionCreate } from "./events/interactionCreate.js";
 import { onMessageCreate } from "./events/messageCreate.js";
 import { onVoiceStateUpdate } from "./events/voiceStateUpdate.js";
 import { logger } from "../lib/logger.js";
+import { ensureYtDlp } from "./lib/music.js";
 
 export let botClient: Client | null = null;
 export const botStartTime = Date.now();
@@ -126,6 +127,8 @@ export async function startBot(): Promise<void> {
     logger.warn("DISCORD_BOT_TOKEN not set — bot will not start");
     return;
   }
+
+  await ensureYtDlp();
 
   const client = createBotClient();
   botClient = client;

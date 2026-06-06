@@ -17,9 +17,32 @@ import {
   VoiceBasedChannel,
 } from "discord.js";
 import play from "play-dl";
-import ytdl from "@distube/ytdl-core";
+import { spawn } from "child_process";
+import { Readable } from "stream";
+import { existsSync } from "fs";
+import { chmod, mkdir } from "fs/promises";
+import path from "path";
+import { fileURLToPath } from "url";
 import { musicEmbed } from "./embeds.js";
 import { logger } from "../../lib/logger.js";
+
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
+const BIN_DIR = path.resolve(__dirname, "../../../../bin");
+const YTDLP_PATH = path.join(BIN_DIR, "yt-dlp");
+const YTDLP_URL = "https://github.com/yt-dlp/yt-dlp/releases/latest/download/yt-dlp_linux";
+
+export async function ensureYtDlp(): Promise<void> {
+  if (existsSync(YTDLP_PATH)) return;
+  logger.info("yt-dlp not found, downloading...");
+  await mkdir(BIN_DIR, { recursive: true });
+  await new Promise<void>((resolve, reject) => {
+    const proc = spawn("curl", ["-sL", YTDLP_URL, "-o", YTDLP_PATH]);
+    proc.on("close", (code) => (code === 0 ? resolve() : reject(new Error(`curl exited ${code}`))));
+    proc.on("error", reject);
+  });
+  await chmod(YTDLP_PATH, 0o755);
+  logger.info("yt-dlp downloaded successfully");
+}
 
 export interface Song {
   title: string;
@@ -55,9 +78,28 @@ function formatDuration(seconds: number): string {
   return `${m}:${String(s).padStart(2, "0")}`;
 }
 
+function createYtDlpStream(url: string): Readable {
+  const proc = spawn(YTDLP_PATH, [
+    "-f", "bestaudio/best",
+    "-o", "-",
+    "--no-playlist",
+    "--quiet",
+    "--no-warnings",
+    url,
+  ]);
+
+  proc.stderr.on("data", (chunk: Buffer) => {
+    const msg = chunk.toString().trim();
+    if (msg) logger.warn({ msg }, "yt-dlp stderr");
+  });
+
+  proc.on("error", (err) => logger.error({ err }, "yt-dlp spawn error"));
+
+  return proc.stdout as Readable;
+}
+
 export async function searchSongs(query: string, limit = 5): Promise<Song[]> {
   try {
-    // YouTube URL — single video
     if (play.yt_validate(query) === "video") {
       const info = await play.video_info(query);
       const d = info.video_details;
@@ -73,7 +115,6 @@ export async function searchSongs(query: string, limit = 5): Promise<Song[]> {
       ];
     }
 
-    // YouTube playlist URL
     if (play.yt_validate(query) === "playlist") {
       const playlist = await play.playlist_info(query, { incomplete: true });
       const videos = await playlist.all_videos();
@@ -87,7 +128,6 @@ export async function searchSongs(query: string, limit = 5): Promise<Song[]> {
       }));
     }
 
-    // Text search
     const results = await play.search(query, { source: { youtube: "video" }, limit });
     return results.map((v) => ({
       title: v.title ?? "Unknown",
@@ -129,17 +169,7 @@ async function playNext(guildId: string): Promise<void> {
   if (!song) return;
 
   try {
-    const stream = ytdl(song.url, {
-      filter: "audioonly",
-      quality: "highestaudio",
-      highWaterMark: 1 << 25,
-      requestOptions: {
-        headers: {
-          "User-Agent":
-            "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
-        },
-      },
-    });
+    const stream = createYtDlpStream(song.url);
 
     const resource = createAudioResource(stream, {
       inputType: StreamType.Arbitrary,
@@ -224,7 +254,6 @@ export async function joinAndPlay(
 
       conn.on(VoiceConnectionStatus.Disconnected, async () => {
         try {
-          // Try to reconnect if briefly disconnected
           await Promise.race([
             entersState(conn!, VoiceConnectionStatus.Signalling, 5_000),
             entersState(conn!, VoiceConnectionStatus.Connecting, 5_000),
