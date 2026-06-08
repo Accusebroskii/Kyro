@@ -11,11 +11,7 @@ import {
   AudioResource,
   StreamType,
 } from "@discordjs/voice";
-import {
-  Guild,
-  TextChannel,
-  VoiceBasedChannel,
-} from "discord.js";
+import { Guild, TextChannel, VoiceBasedChannel } from "discord.js";
 import play from "play-dl";
 import { spawn } from "child_process";
 import { Readable } from "stream";
@@ -29,7 +25,8 @@ import { logger } from "../../lib/logger.js";
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const BIN_DIR = path.resolve(__dirname, "../../../../bin");
 const YTDLP_PATH = path.join(BIN_DIR, "yt-dlp");
-const YTDLP_URL = "https://github.com/yt-dlp/yt-dlp/releases/latest/download/yt-dlp_linux";
+const YTDLP_URL =
+  "https://github.com/yt-dlp/yt-dlp/releases/latest/download/yt-dlp_linux";
 
 export async function ensureYtDlp(): Promise<void> {
   if (existsSync(YTDLP_PATH)) return;
@@ -37,7 +34,9 @@ export async function ensureYtDlp(): Promise<void> {
   await mkdir(BIN_DIR, { recursive: true });
   await new Promise<void>((resolve, reject) => {
     const proc = spawn("curl", ["-sL", YTDLP_URL, "-o", YTDLP_PATH]);
-    proc.on("close", (code) => (code === 0 ? resolve() : reject(new Error(`curl exited ${code}`))));
+    proc.on("close", (code) =>
+      code === 0 ? resolve() : reject(new Error(`curl exited ${code}`)),
+    );
     proc.on("error", reject);
   });
   await chmod(YTDLP_PATH, 0o755);
@@ -74,14 +73,17 @@ function formatDuration(seconds: number): string {
   const h = Math.floor(seconds / 3600);
   const m = Math.floor((seconds % 3600) / 60);
   const s = seconds % 60;
-  if (h > 0) return `${h}:${String(m).padStart(2, "0")}:${String(s).padStart(2, "0")}`;
+  if (h > 0)
+    return `${h}:${String(m).padStart(2, "0")}:${String(s).padStart(2, "0")}`;
   return `${m}:${String(s).padStart(2, "0")}`;
 }
 
 function createYtDlpStream(url: string): Readable {
   const proc = spawn(YTDLP_PATH, [
-    "-f", "bestaudio/best",
-    "-o", "-",
+    "-f",
+    "bestaudio/best",
+    "-o",
+    "-",
     "--no-playlist",
     "--quiet",
     "--no-warnings",
@@ -89,8 +91,7 @@ function createYtDlpStream(url: string): Readable {
   ]);
 
   proc.stderr.on("data", (chunk: Buffer) => {
-    const msg = chunk.toString().trim();
-    if (msg) logger.warn({ msg }, "yt-dlp stderr");
+    console.log(chunk.toString());
   });
 
   proc.on("error", (err) => logger.error({ err }, "yt-dlp spawn error"));
@@ -128,7 +129,10 @@ export async function searchSongs(query: string, limit = 5): Promise<Song[]> {
       }));
     }
 
-    const results = await play.search(query, { source: { youtube: "video" }, limit });
+    const results = await play.search(query, {
+      source: { youtube: "video" },
+      limit,
+    });
     return results.map((v) => ({
       title: v.title ?? "Unknown",
       url: v.url,
@@ -158,8 +162,12 @@ async function playNext(guildId: string): Promise<void> {
       queue.currentIndex = 0;
     } else {
       queues.delete(guildId);
-      const textChannel = queue.guild.channels.cache.get(queue.textChannelId) as TextChannel | undefined;
-      textChannel?.send({ embeds: [musicEmbed("Queue ended", "No more songs in queue.")] });
+      const textChannel = queue.guild.channels.cache.get(
+        queue.textChannelId,
+      ) as TextChannel | undefined;
+      textChannel?.send({
+        embeds: [musicEmbed("Queue ended", "No more songs in queue.")],
+      });
       conn.destroy();
       return;
     }
@@ -180,7 +188,9 @@ async function playNext(guildId: string): Promise<void> {
     queue.player.play(resource);
     conn.subscribe(queue.player);
 
-    const textChannel = queue.guild.channels.cache.get(queue.textChannelId) as TextChannel | undefined;
+    const textChannel = queue.guild.channels.cache.get(queue.textChannelId) as
+      | TextChannel
+      | undefined;
     textChannel?.send({
       embeds: [
         musicEmbed(
@@ -358,7 +368,11 @@ export function getCurrentSong(guildId: string): Song | null {
   return q.songs[q.currentIndex] ?? null;
 }
 
-export function getQueueList(guildId: string): { current: Song | null; upcoming: Song[]; total: number } {
+export function getQueueList(guildId: string): {
+  current: Song | null;
+  upcoming: Song[];
+  total: number;
+} {
   const q = queues.get(guildId);
   if (!q) return { current: null, upcoming: [], total: 0 };
   const current = q.songs[q.currentIndex] ?? null;

@@ -1,7 +1,14 @@
-import { SlashCommandBuilder, ChatInputCommandInteraction, EmbedBuilder } from "discord.js";
+import {
+  SlashCommandBuilder,
+  ChatInputCommandInteraction,
+  EmbedBuilder,
+} from "discord.js";
 
-const COMMAND_CATEGORIES: Record<string, { emoji: string; commands: Array<{ name: string; description: string }> }> = {
-  "Moderation": {
+const COMMAND_CATEGORIES: Record<
+  string,
+  { emoji: string; commands: Array<{ name: string; description: string }> }
+> = {
+  Moderation: {
     emoji: "🔨",
     commands: [
       { name: "/ban", description: "Ban a member from the server" },
@@ -16,7 +23,7 @@ const COMMAND_CATEGORIES: Record<string, { emoji: string; commands: Array<{ name
       { name: "/purge", description: "Bulk delete messages (1-100)" },
     ],
   },
-  "Administration": {
+  Administration: {
     emoji: "⚙️",
     commands: [
       { name: "/role add", description: "Add a role to a member" },
@@ -31,40 +38,75 @@ const COMMAND_CATEGORIES: Record<string, { emoji: string; commands: Array<{ name
   "Setup & Configuration": {
     emoji: "🛠️",
     commands: [
-      { name: "/setup welcome", description: "Configure the welcome message and channel" },
-      { name: "/setup logs", description: "Configure moderation and general log channels" },
-      { name: "/setup modmail", description: "Configure the ModMail forum channel" },
-      { name: "/setup tickets", description: "Configure the ticket system category and log" },
-      { name: "/setup automod", description: "Toggle anti-spam, anti-raid, and auto-mod" },
+      {
+        name: "/setup welcome",
+        description: "Configure the welcome message and channel",
+      },
+      {
+        name: "/setup logs",
+        description: "Configure moderation and general log channels",
+      },
+      {
+        name: "/setup tickets",
+        description: "Configure the ticket system category and log",
+      },
+      {
+        name: "/setup automod",
+        description: "Toggle anti-spam, anti-raid, and auto-mod",
+      },
       { name: "/setup roles", description: "Set mod, admin, and mute roles" },
-      { name: "/setup autorole", description: "Add/remove/list auto-roles for new members" },
-      { name: "/setup jointovoice", description: "Configure join-to-create voice channels" },
-      { name: "/setup maxwarnings", description: "Set the max warnings before auto-action" },
+      {
+        name: "/setup autorole",
+        description: "Add/remove/list auto-roles for new members",
+      },
+      {
+        name: "/setup jointovoice",
+        description: "Configure join-to-create voice channels",
+      },
+      {
+        name: "/setup maxwarnings",
+        description: "Set the max warnings before auto-action",
+      },
       { name: "/setup view", description: "View current bot configuration" },
     ],
   },
-  "Tickets": {
+  Tickets: {
     emoji: "🎫",
     commands: [
       { name: "/ticket open", description: "Open a new support ticket" },
       { name: "/ticket close", description: "Close the current ticket" },
       { name: "/ticket add", description: "Add a user to the current ticket" },
-      { name: "/ticket remove", description: "Remove a user from the current ticket" },
+      {
+        name: "/ticket remove",
+        description: "Remove a user from the current ticket",
+      },
       { name: "/ticket claim", description: "Claim a ticket as your own" },
     ],
   },
-  "ModMail": {
+  ModMail: {
     emoji: "📬",
     commands: [
-      { name: "DM the bot", description: "Send a DM to open a ModMail thread with staff" },
-      { name: "/modmail reply", description: "Reply to a user in a ModMail thread (staff only)" },
-      { name: "/modmail close", description: "Close a ModMail thread (staff only)" },
+      {
+        name: "DM the bot",
+        description: "Send a DM to open a ModMail thread with staff",
+      },
+      {
+        name: "/modmail reply",
+        description: "Reply to a user in a ModMail thread (staff only)",
+      },
+      {
+        name: "/modmail close",
+        description: "Close a ModMail thread (staff only)",
+      },
     ],
   },
-  "Music": {
+  Music: {
     emoji: "🎵",
     commands: [
-      { name: "/play", description: "Play a song by name, YouTube URL, or playlist URL" },
+      {
+        name: "/play",
+        description: "Play a song by name, YouTube URL, or playlist URL",
+      },
       { name: "/pause", description: "Pause the current song" },
       { name: "/resume", description: "Resume paused playback" },
       { name: "/skip", description: "Skip the current song" },
@@ -74,9 +116,18 @@ const COMMAND_CATEGORIES: Record<string, { emoji: string; commands: Array<{ name
       { name: "/volume", description: "Set playback volume (0-100)" },
       { name: "/loop", description: "Set loop mode: off, song, or queue" },
       { name: "/shuffle", description: "Shuffle the queue" },
-      { name: "/remove", description: "Remove a song from the queue by position" },
-      { name: "/disconnect", description: "Disconnect the bot from the voice channel" },
-      { name: "/playlist save", description: "Save the current queue as a named playlist" },
+      {
+        name: "/remove",
+        description: "Remove a song from the queue by position",
+      },
+      {
+        name: "/disconnect",
+        description: "Disconnect the bot from the voice channel",
+      },
+      {
+        name: "/playlist save",
+        description: "Save the current queue as a named playlist",
+      },
       { name: "/playlist load", description: "Load and play a saved playlist" },
       { name: "/playlist delete", description: "Delete a saved playlist" },
       { name: "/playlist list", description: "List all saved playlists" },
@@ -85,12 +136,18 @@ const COMMAND_CATEGORIES: Record<string, { emoji: string; commands: Array<{ name
   "Multicraft Support": {
     emoji: "🎮",
     commands: [
-      { name: "/bugreport", description: "Submit a bug report for a Multicraft server" },
-      { name: "/playerreport", description: "Report a player for rule violations" },
+      {
+        name: "/bugreport",
+        description: "Submit a bug report for a Multicraft server",
+      },
+      {
+        name: "/playerreport",
+        description: "Report a player for rule violations",
+      },
       { name: "/support", description: "Submit a general support request" },
     ],
   },
-  "Fun": {
+  Fun: {
     emoji: "🎉",
     commands: [
       { name: "/8ball", description: "Ask the magic 8-ball a yes/no question" },
@@ -98,24 +155,39 @@ const COMMAND_CATEGORIES: Record<string, { emoji: string; commands: Array<{ name
       { name: "/dice", description: "Roll customizable dice" },
       { name: "/joke", description: "Get a random joke" },
       { name: "/poll", description: "Create a quick reaction poll" },
-      { name: "/serverinfo", description: "View information about this server" },
+      {
+        name: "/serverinfo",
+        description: "View information about this server",
+      },
       { name: "/userinfo", description: "View information about a user" },
     ],
   },
-  "Security": {
+  Security: {
     emoji: "🛡️",
     commands: [
-      { name: "/security status", description: "View current security settings" },
+      {
+        name: "/security status",
+        description: "View current security settings",
+      },
       { name: "/security antispam", description: "Toggle anti-spam detection" },
       { name: "/security antiraid", description: "Toggle anti-raid mode" },
-      { name: "/security whitelist", description: "Manage anti-raid whitelist" },
+      {
+        name: "/security whitelist",
+        description: "Manage anti-raid whitelist",
+      },
     ],
   },
-  "Voice": {
+  Voice: {
     emoji: "🔊",
     commands: [
-      { name: "Join the configured channel", description: "Auto-creates a private voice channel for you" },
-      { name: "/setup jointovoice", description: "Configure the join-to-create voice system" },
+      {
+        name: "Join the configured channel",
+        description: "Auto-creates a private voice channel for you",
+      },
+      {
+        name: "/setup jointovoice",
+        description: "Configure the join-to-create voice system",
+      },
     ],
   },
 };
@@ -125,7 +197,8 @@ export const helpCommand = {
     .setName("help")
     .setDescription("View all available commands")
     .addStringOption((o) =>
-      o.setName("category")
+      o
+        .setName("category")
         .setDescription("Filter by category")
         .addChoices(
           { name: "Moderation", value: "Moderation" },
@@ -136,9 +209,10 @@ export const helpCommand = {
           { name: "Music", value: "Music" },
           { name: "Multicraft Support", value: "Multicraft Support" },
           { name: "Fun", value: "Fun" },
+          { name: "Utility", value: "Utility" },
           { name: "Security", value: "Security" },
           { name: "Voice", value: "Voice" },
-        )
+        ),
     ),
   async execute(interaction: ChatInputCommandInteraction) {
     const categoryFilter = interaction.options.getString("category");
@@ -148,7 +222,11 @@ export const helpCommand = {
       const embed = new EmbedBuilder()
         .setTitle(`${cat.emoji} ${categoryFilter} Commands`)
         .setColor(0x5865f2)
-        .setDescription(cat.commands.map((c) => `\`${c.name}\` — ${c.description}`).join("\n"))
+        .setDescription(
+          cat.commands
+            .map((c) => `\`${c.name}\` — ${c.description}`)
+            .join("\n"),
+        )
         .setFooter({ text: "Use /help to see all categories" })
         .setTimestamp();
       await interaction.reply({ embeds: [embed], ephemeral: true });
@@ -158,19 +236,31 @@ export const helpCommand = {
     const embed = new EmbedBuilder()
       .setTitle("📖 Bot Help — All Commands")
       .setColor(0x5865f2)
-      .setDescription("Use `/help category:<name>` to see commands in a specific category.\n\nAll commands use Discord slash commands — type `/` to see them all in Discord.")
+      .setDescription(
+        "Use `/help category:<name>` to see commands in a specific category.\n\nAll commands use Discord slash commands — type `/` to see them all in Discord.",
+      )
       .setTimestamp();
 
     for (const [name, cat] of Object.entries(COMMAND_CATEGORIES)) {
       embed.addFields({
         name: `${cat.emoji} ${name}`,
-        value: cat.commands.slice(0, 5).map((c) => `\`${c.name}\``).join(" ") + (cat.commands.length > 5 ? ` +${cat.commands.length - 5} more` : ""),
+        value:
+          cat.commands
+            .slice(0, 5)
+            .map((c) => `\`${c.name}\``)
+            .join(" ") +
+          (cat.commands.length > 5 ? ` +${cat.commands.length - 5} more` : ""),
         inline: false,
       });
     }
 
-    const totalCommands = Object.values(COMMAND_CATEGORIES).reduce((sum, c) => sum + c.commands.length, 0);
-    embed.setFooter({ text: `${totalCommands} total commands across ${Object.keys(COMMAND_CATEGORIES).length} categories` });
+    const totalCommands = Object.values(COMMAND_CATEGORIES).reduce(
+      (sum, c) => sum + c.commands.length,
+      0,
+    );
+    embed.setFooter({
+      text: `${totalCommands} total commands across ${Object.keys(COMMAND_CATEGORIES).length} categories`,
+    });
 
     await interaction.reply({ embeds: [embed], ephemeral: true });
   },

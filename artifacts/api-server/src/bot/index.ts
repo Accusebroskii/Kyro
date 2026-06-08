@@ -87,7 +87,9 @@ export function createBotClient(): Client {
 
       // Open new modmail thread
       try {
-        const forumChannel = guild.channels.cache.get(config.modmailForumId!) as any;
+        const forumChannel = guild.channels.cache.get(
+          process.env.MODMAIL_FORUM_ID!
+        ) as any;
         if (!forumChannel || forumChannel.type !== ChannelType.GuildForum) continue;
 
         const thread = await forumChannel.threads.create({

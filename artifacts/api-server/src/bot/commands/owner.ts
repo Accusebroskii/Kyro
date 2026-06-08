@@ -1,45 +1,110 @@
-import {
-  SlashCommandBuilder,
-  ChatInputCommandInteraction,
-  PermissionFlagsBits,
-} from "discord.js";
-import { isOwner } from "../lib/permissions.js";
-import { successEmbed, errorEmbed } from "../lib/embeds.js";
-import { logger } from "../../lib/logger.js";
+import { SlashCommandBuilder, ChatInputCommandInteraction } from "discord.js";
 
 export const restartCommand = {
   data: new SlashCommandBuilder()
     .setName("restart")
-    .setDescription("Restart the bot (owner only)")
-    .setDefaultMemberPermissions(PermissionFlagsBits.Administrator),
+    .setDescription("Restart the bot"),
+
   async execute(interaction: ChatInputCommandInteraction) {
-    if (!isOwner(interaction)) {
-      await interaction.reply({ embeds: [errorEmbed("Only the bot owner can use this command.")], ephemeral: true });
-      return;
-    }
-    await interaction.reply({ embeds: [successEmbed("Restarting", "Bot is restarting...")] });
-    logger.info("Owner-initiated restart");
+    await interaction.reply({
+      content: "Restarting bot...",
+      ephemeral: true,
+    });
+
     setTimeout(() => process.exit(0), 1000);
   },
 };
 
 export const pingCommand = {
-  data: new SlashCommandBuilder().setName("ping").setDescription("Check bot latency"),
+  data: new SlashCommandBuilder()
+    .setName("ping")
+    .setDescription("Check bot latency"),
+
   async execute(interaction: ChatInputCommandInteraction) {
-    const sent = await interaction.reply({ content: "Pinging...", fetchReply: true });
+    const sent = await interaction.reply({
+      content: "Pinging...",
+      fetchReply: true,
+    });
+
     const latency = sent.createdTimestamp - interaction.createdTimestamp;
-    const wsLatency = interaction.client.ws.ping;
+
     await interaction.editReply({
-      content: "",
-      embeds: [{
-        title: "🏓 Pong!",
-        color: latency < 100 ? 0x57f287 : latency < 300 ? 0xfee75c : 0xed4245,
-        fields: [
-          { name: "Bot Latency", value: `${latency}ms`, inline: true },
-          { name: "WebSocket", value: `${wsLatency}ms`, inline: true },
-        ],
-        timestamp: new Date().toISOString(),
-      }],
+      content: `🏓 Pong! ${latency}ms`,
+    });
+  },
+};
+
+export const botinfoCommand = {
+  data: new SlashCommandBuilder()
+    .setName("botinfo")
+    .setDescription("Shows information about the bot"),
+
+  async execute(interaction: ChatInputCommandInteraction) {
+    const client = interaction.client;
+
+    await interaction.reply({
+      embeds: [
+        {
+          title: "🤖 Bot Information",
+          color: 0x5865f2,
+          thumbnail: {
+            url: client.user?.displayAvatarURL() ?? "",
+          },
+          fields: [
+            {
+              name: "👑 Owner",
+              value: "<@1375707337104429088>",
+              inline: true,
+            },
+            {
+              name: "📛 Owner Username",
+              value: "accusebroski_",
+              inline: true,
+            },
+            {
+              name: "🆔 Owner ID",
+              value: "1375707337104429088",
+              inline: true,
+            },
+
+            {
+              name: "🧑‍💻 Developer",
+              value: "<@1285144624096084000>",
+              inline: true,
+            },
+            {
+              name: "📛 Developer Username",
+              value: "ziadlive",
+              inline: true,
+            },
+            {
+              name: "🆔 Developer ID",
+              value: "1285144624096084000",
+              inline: true,
+            },
+
+            {
+              name: "👥 Users",
+              value: `${client.users.cache.size}`,
+              inline: true,
+            },
+            {
+              name: "🌐 Servers",
+              value: `${client.guilds.cache.size}`,
+              inline: true,
+            },
+            {
+              name: "🏓 Ping",
+              value: `${Math.max(0, client.ws.ping)}ms`,
+              inline: true,
+            },
+          ],
+          footer: {
+            text: "Thanks for using the bot!",
+          },
+          timestamp: new Date().toISOString(),
+        },
+      ],
     });
   },
 };
