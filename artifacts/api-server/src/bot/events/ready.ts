@@ -12,7 +12,7 @@ export async function onReady(client: Client): Promise<void> {
   logger.info({ tag: client.user.tag }, "Bot is ready");
 
   // Set bot activity
-  client.user.setActivity("Area12 /help", {
+  client.user.setActivity("Kyro /help", {
     type: ActivityType.Watching,
   });
 
