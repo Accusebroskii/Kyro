@@ -136,7 +136,7 @@ export async function handleTicketPanelSelect(interaction: StringSelectMenuInter
   const topicMap: Record<string, string> = {
     general: "General Support",
     staff: "Staff Report",
-    perks: "Claim Paid Perks",
+    report: "Bug Report",
   };
 
   const topic = interaction.values[0];

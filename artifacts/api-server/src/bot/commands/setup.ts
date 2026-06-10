@@ -109,7 +109,7 @@ export const setupCommand = {
             "Welcome to the Ticket Center! Select a topic below to open a ticket.\n\n" +
             "**General Support** — Questions, reports, or anything else.\n\n" +
             "**Staff Report** — Report a staff member. Evidence required.\n\n" +
-            "**Claim Paid Perks** — Purchased a perk or boosted? Claim your roles here."
+            "**Bug Report** — Found a bug report? Open a ticket."
           )
           .setFooter({ text: "Any inactivity over 12 hours may result in closure." });
 
