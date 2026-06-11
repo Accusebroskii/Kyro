@@ -7,7 +7,6 @@ const spamTracker = new Map<string, { count: number; lastMessage: number; warned
 
 export async function onMessageCreate(message: Message): Promise<void> {
   if (message.author.bot || !message.guild) return;
-
   const guildId = message.guild.id;
 
   // ModMail: if a staff member types in a modmail thread, forward it to the user
@@ -23,9 +22,7 @@ export async function onMessageCreate(message: Message): Promise<void> {
         ),
       )
       .limit(1);
-
     if (thread) {
-      // This is a modmail thread — forward the message to the user
       try {
         const user = await message.client.users.fetch(thread.userId);
         const member = message.member as GuildMember;
@@ -53,6 +50,12 @@ export async function onMessageCreate(message: Message): Promise<void> {
 
     if (!config?.antispamEnabled) return;
 
+    // Skip mods, admins, and anyone with Administrator permission
+    const member = message.guild.members.cache.get(message.author.id);
+    if (config.modRoleId && member?.roles.cache.has(config.modRoleId)) return;
+    if (config.adminRoleId && member?.roles.cache.has(config.adminRoleId)) return;
+    if (member?.permissions.has("Administrator")) return;
+
     const key = `${guildId}:${message.author.id}`;
     const now = Date.now();
     const tracker = spamTracker.get(key) ?? { count: 0, lastMessage: now, warned: false };
@@ -72,7 +75,6 @@ export async function onMessageCreate(message: Message): Promise<void> {
       } catch {
         // ignore
       }
-
       if (!tracker.warned) {
         tracker.warned = true;
         if (message.channel instanceof TextChannel) {
@@ -81,7 +83,6 @@ export async function onMessageCreate(message: Message): Promise<void> {
             .then((m: { delete: () => Promise<unknown> }) => setTimeout(() => m.delete().catch(() => {}), 5000))
             .catch(() => {});
         }
-
         if (tracker.count >= 8) {
           try {
             const member = await message.guild.members.fetch(message.author.id);
