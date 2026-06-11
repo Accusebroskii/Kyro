@@ -8,7 +8,7 @@ import {
   ActionRowBuilder,
   StringSelectMenuBuilder,
 } from "discord.js";
-import { db, guildConfigTable, autoRolesTable } from "@workspace/db";
+import { db, guildConfigTable, autoRolesTable, ticketTopicsTable } from "@workspace/db";
 import { eq, and } from "drizzle-orm";
 import { checkAdmin } from "../lib/permissions.js";
 import { successEmbed, errorEmbed, infoEmbed } from "../lib/embeds.js";
@@ -32,6 +32,19 @@ export const setupCommand = {
         .addChannelOption((o) => o.setName("category").setDescription("Category for ticket channels").addChannelTypes(ChannelType.GuildCategory))
         .addChannelOption((o) => o.setName("logchannel").setDescription("Ticket log channel").addChannelTypes(ChannelType.GuildText))
         .addChannelOption((o) => o.setName("panelchannel").setDescription("Channel to send the ticket panel to").addChannelTypes(ChannelType.GuildText)),
+    )
+    .addSubcommand((s) =>
+      s.setName("addtopic").setDescription("Add a topic to the ticket panel")
+        .addStringOption((o) => o.setName("name").setDescription("Topic name e.g. Staff Report").setRequired(true))
+        .addStringOption((o) => o.setName("description").setDescription("Short description shown in the panel"))
+        .addStringOption((o) => o.setName("emoji").setDescription("Emoji for this topic e.g. 📩")),
+    )
+    .addSubcommand((s) =>
+      s.setName("removetopic").setDescription("Remove a topic from the ticket panel")
+        .addStringOption((o) => o.setName("name").setDescription("Exact topic name to remove").setRequired(true)),
+    )
+    .addSubcommand((s) =>
+      s.setName("listtopics").setDescription("List all ticket topics for this server"),
     )
     .addSubcommand((s) =>
       s.setName("automod").setDescription("Toggle auto-moderation features")
@@ -71,7 +84,6 @@ export const setupCommand = {
     const sub = interaction.options.getSubcommand();
     const guildId = interaction.guildId!;
 
-    // Ensure config exists
     const existing = await db.select().from(guildConfigTable).where(eq(guildConfigTable.guildId, guildId)).limit(1);
     if (!existing[0]) {
       await db.insert(guildConfigTable).values({ guildId, guildName: interaction.guild!.name, ownerId: interaction.guild!.ownerId });
@@ -100,6 +112,12 @@ export const setupCommand = {
       }).where(eq(guildConfigTable.guildId, guildId));
 
       if (panelChannel) {
+        const topics = await db.select().from(ticketTopicsTable).where(eq(ticketTopicsTable.guildId, guildId));
+        if (topics.length === 0) {
+          await interaction.reply({ embeds: [errorEmbed("No topics set! Use `/setup addtopic` to add topics first.")], ephemeral: true });
+          return;
+        }
+
         const channel = interaction.guild!.channels.cache.get(panelChannel.id) as TextChannel;
 
         const embed = new EmbedBuilder()
@@ -107,9 +125,7 @@ export const setupCommand = {
           .setColor(0x5865f2)
           .setDescription(
             "Welcome to the Ticket Center! Select a topic below to open a ticket.\n\n" +
-            "**General Support** — Questions, reports, or anything else.\n\n" +
-            "**Staff Report** — Report a staff member. Evidence required.\n\n" +
-            "**Bug Report** — Found a bug report? Open a ticket."
+            topics.map((t) => `**${t.label}** — ${t.description ?? ""}`).join("\n\n")
           )
           .setFooter({ text: "Any inactivity over 12 hours may result in closure." });
 
@@ -117,11 +133,12 @@ export const setupCommand = {
           new StringSelectMenuBuilder()
             .setCustomId("ticket_panel_select")
             .setPlaceholder("Select a topic...")
-            .addOptions([
-              { label: "General Support", value: "general", emoji: "📩" },
-              { label: "Staff Report", value: "staff", emoji: "📩" },
-              { label: "Bug Report", value: "perks", emoji: "📩" },
-            ])
+            .addOptions(topics.map((t) => ({
+              label: t.label,
+              value: t.label,
+              description: t.description ?? undefined,
+              emoji: t.emoji ?? "📩",
+            })))
         );
 
         await channel.send({ embeds: [embed], components: [row] });
@@ -129,6 +146,34 @@ export const setupCommand = {
 
       await interaction.reply({
         embeds: [successEmbed("Tickets Configured", `Ticket system updated.${panelChannel ? ` Panel sent to <#${panelChannel.id}>.` : ""}`)],
+      });
+
+    } else if (sub === "addtopic") {
+      const label = interaction.options.getString("name", true);
+      const description = interaction.options.getString("description") ?? undefined;
+      const emoji = interaction.options.getString("emoji") ?? "📩";
+
+      const existing = await db.select().from(ticketTopicsTable).where(eq(ticketTopicsTable.guildId, guildId));
+      if (existing.length >= 25) {
+        await interaction.reply({ embeds: [errorEmbed("You can have a maximum of 25 topics.")], ephemeral: true });
+        return;
+      }
+
+      await db.insert(ticketTopicsTable).values({ guildId, label, description, emoji });
+      await interaction.reply({ embeds: [successEmbed("Topic Added", `Topic **${label}** added to the ticket panel.`)] });
+
+    } else if (sub === "removetopic") {
+      const label = interaction.options.getString("name", true);
+      await db.delete(ticketTopicsTable).where(and(eq(ticketTopicsTable.guildId, guildId), eq(ticketTopicsTable.label, label)));
+      await interaction.reply({ embeds: [successEmbed("Topic Removed", `Topic **${label}** removed.`)] });
+
+    } else if (sub === "listtopics") {
+      const topics = await db.select().from(ticketTopicsTable).where(eq(ticketTopicsTable.guildId, guildId));
+      await interaction.reply({
+        embeds: [infoEmbed("Ticket Topics", topics.length
+          ? topics.map((t) => `${t.emoji} **${t.label}**${t.description ? ` — ${t.description}` : ""}`).join("\n")
+          : "No topics set. Use `/setup addtopic` to add some.")],
+        ephemeral: true,
       });
 
     } else if (sub === "automod") {

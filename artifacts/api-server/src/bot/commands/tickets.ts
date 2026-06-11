@@ -47,10 +47,10 @@ export const ticketCommand = {
 
     if (sub === "open") {
       const subject = interaction.options.getString("subject", true);
-      await openTicket({ guildId, guild, userId: interaction.user.id, userTag: interaction.user.tag, subject });
-      const [config] = await db.select().from(guildConfigTable).where(eq(guildConfigTable.guildId, guildId)).limit(1);
-      const counter = config?.ticketCounter ?? 1;
-      const channel = guild.channels.cache.find((c) => c.name === `ticket-${String(counter).padStart(4, "0")}`);
+      const { channel } = await openTicket({
+        guildId, guild, userId: interaction.user.id,
+        userTag: interaction.user.tag, subject,
+      });
       await interaction.reply({ content: `Your ticket has been created: ${channel}`, ephemeral: true });
 
     } else if (sub === "close") {
@@ -86,7 +86,6 @@ export const ticketCommand = {
   },
 };
 
-// Shared helper to create a ticket channel
 async function openTicket({ guildId, guild, userId, userTag, subject }: {
   guildId: string;
   guild: any;
@@ -98,7 +97,8 @@ async function openTicket({ guildId, guild, userId, userTag, subject }: {
   const counter = (config?.ticketCounter ?? 0) + 1;
   await db.update(guildConfigTable).set({ ticketCounter: counter }).where(eq(guildConfigTable.guildId, guildId));
 
-  const ticketName = `ticket-${String(counter).padStart(4, "0")}`;
+  const slug = subject.toLowerCase().replace(/\s+/g, "-").replace(/[^a-z0-9-]/g, "");
+  const ticketName = `${slug}-${String(counter).padStart(4, "0")}`;
   const category = config?.ticketCategoryId ? guild.channels.cache.get(config.ticketCategoryId) : null;
 
   const channel = await guild.channels.create({
@@ -118,7 +118,7 @@ async function openTicket({ guildId, guild, userId, userTag, subject }: {
   }).returning();
 
   const embed = new EmbedBuilder()
-    .setTitle(`🎫 Ticket #${counter} — ${subject}`)
+    .setTitle(`🎫 ${subject} #${counter}`)
     .setColor(0x5865f2)
     .setDescription(`Thank you for opening a ticket, <@${userId}>!\n\n**Topic:** ${subject}\n\nOur staff will be with you shortly.`)
     .setTimestamp();
@@ -131,16 +131,8 @@ async function openTicket({ guildId, guild, userId, userTag, subject }: {
   return { channel, ticket, counter };
 }
 
-// Handler for ticket panel dropdown
 export async function handleTicketPanelSelect(interaction: StringSelectMenuInteraction) {
-  const topicMap: Record<string, string> = {
-    general: "General Support",
-    staff: "Staff Report",
-    report: "Bug Report",
-  };
-
-  const topic = interaction.values[0];
-  const subject = topicMap[topic] ?? topic;
+  const subject = interaction.values[0];
 
   const { channel } = await openTicket({
     guildId: interaction.guildId!,
