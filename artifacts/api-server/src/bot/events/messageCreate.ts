@@ -51,7 +51,14 @@ export async function onMessageCreate(message: Message): Promise<void> {
     if (!config?.antispamEnabled) return;
 
     // Skip mods, admins, and anyone with Administrator permission
-    const member = message.guild.members.cache.get(message.author.id);
+    let member = message.guild.members.cache.get(message.author.id);
+    if (!member) {
+      try {
+        member = await message.guild.members.fetch(message.author.id);
+      } catch {
+        // ignore
+      }
+    }
     if (config.modRoleId && member?.roles.cache.has(config.modRoleId)) return;
     if (config.adminRoleId && member?.roles.cache.has(config.adminRoleId)) return;
     if (member?.permissions.has("Administrator")) return;
