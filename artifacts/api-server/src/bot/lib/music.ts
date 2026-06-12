@@ -43,6 +43,95 @@ export async function ensureYtDlp(): Promise<void> {
   logger.info("yt-dlp downloaded successfully");
 }
 
+// Spotify token cache
+let spotifyToken: string | null = null;
+let spotifyTokenExpiry = 0;
+
+async function getSpotifyToken(): Promise<string | null> {
+  const clientId = process.env.SPOTIFY_CLIENT_ID;
+  const clientSecret = process.env.SPOTIFY_CLIENT_SECRET;
+  if (!clientId || !clientSecret) return null;
+
+  if (spotifyToken && Date.now() < spotifyTokenExpiry) return spotifyToken;
+
+  try {
+    const res = await fetch("https://accounts.spotify.com/api/token", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/x-www-form-urlencoded",
+        Authorization: `Basic ${Buffer.from(`${clientId}:${clientSecret}`).toString("base64")}`,
+      },
+      body: "grant_type=client_credentials",
+    });
+    const data = await res.json() as { access_token: string; expires_in: number };
+    spotifyToken = data.access_token;
+    spotifyTokenExpiry = Date.now() + (data.expires_in - 60) * 1000;
+    return spotifyToken;
+  } catch (err) {
+    logger.error({ err }, "Failed to get Spotify token");
+    return null;
+  }
+}
+
+async function resolveSpotifyUrl(url: string): Promise<Song[]> {
+  const token = await getSpotifyToken();
+  if (!token) return [];
+
+  try {
+    // Spotify track
+    const trackMatch = url.match(/spotify\.com\/track\/([a-zA-Z0-9]+)/);
+    if (trackMatch) {
+      const res = await fetch(`https://api.spotify.com/v1/tracks/${trackMatch[1]}`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      const track = await res.json() as any;
+      const query = `${track.name} ${track.artists[0]?.name}`;
+      return await searchSongs(query, 1);
+    }
+
+    // Spotify playlist
+    const playlistMatch = url.match(/spotify\.com\/playlist\/([a-zA-Z0-9]+)/);
+    if (playlistMatch) {
+      const songs: Song[] = [];
+      let next: string | null = `https://api.spotify.com/v1/playlists/${playlistMatch[1]}/tracks?limit=50`;
+      while (next && songs.length < 100) {
+        const res = await fetch(next, {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+        const data = await res.json() as any;
+        next = data.next;
+        for (const item of data.items) {
+          if (!item.track) continue;
+          const query = `${item.track.name} ${item.track.artists[0]?.name}`;
+          const results = await searchSongs(query, 1);
+          if (results.length) songs.push(results[0]!);
+        }
+      }
+      return songs;
+    }
+
+    // Spotify album
+    const albumMatch = url.match(/spotify\.com\/album\/([a-zA-Z0-9]+)/);
+    if (albumMatch) {
+      const res = await fetch(`https://api.spotify.com/v1/albums/${albumMatch[1]}/tracks?limit=50`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      const data = await res.json() as any;
+      const songs: Song[] = [];
+      for (const track of data.items.slice(0, 50)) {
+        const query = `${track.name} ${track.artists[0]?.name}`;
+        const results = await searchSongs(query, 1);
+        if (results.length) songs.push(results[0]!);
+      }
+      return songs;
+    }
+  } catch (err) {
+    logger.error({ err }, "Error resolving Spotify URL");
+  }
+
+  return [];
+}
+
 export interface Song {
   title: string;
   url: string;
@@ -80,13 +169,13 @@ function formatDuration(seconds: number): string {
 
 function createYtDlpStream(url: string): Readable {
   const proc = spawn(YTDLP_PATH, [
-    "-f",
-    "bestaudio/best",
-    "-o",
-    "-",
+    "-f", "bestaudio/best",
+    "-o", "-",
     "--no-playlist",
     "--quiet",
     "--no-warnings",
+    "--geo-bypass",
+    "--extractor-args", "youtube:player_client=android",
     url,
   ]);
 
@@ -101,6 +190,11 @@ function createYtDlpStream(url: string): Readable {
 
 export async function searchSongs(query: string, limit = 5): Promise<Song[]> {
   try {
+    // Handle Spotify URLs
+    if (query.includes("spotify.com")) {
+      return await resolveSpotifyUrl(query);
+    }
+
     if (play.yt_validate(query) === "video") {
       const info = await play.video_info(query);
       const d = info.video_details;
