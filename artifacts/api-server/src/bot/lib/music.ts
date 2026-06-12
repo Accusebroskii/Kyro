@@ -1,7 +1,6 @@
 import {
   AudioPlayer,
   AudioPlayerStatus,
-  VoiceConnection,
   createAudioPlayer,
   createAudioResource,
   joinVoiceChannel,
@@ -12,7 +11,6 @@ import {
   StreamType,
 } from "@discordjs/voice";
 import { Guild, TextChannel, VoiceBasedChannel } from "discord.js";
-import play from "play-dl";
 import { spawn } from "child_process";
 import { Readable } from "stream";
 import { existsSync } from "fs";
@@ -195,46 +193,55 @@ export async function searchSongs(query: string, limit = 5): Promise<Song[]> {
       return await resolveSpotifyUrl(query);
     }
 
-    if (play.yt_validate(query) === "video") {
-      const info = await play.video_info(query);
-      const d = info.video_details;
-      return [
-        {
-          title: d.title ?? "Unknown",
-          url: d.url,
-          duration: formatDuration(d.durationInSec),
-          thumbnail: d.thumbnails?.[0]?.url ?? "",
+    // Use yt-dlp for all searching
+    const isUrl = query.startsWith("http");
+    const args = isUrl
+      ? [
+          "--dump-json",
+          "--no-playlist",
+          "--quiet",
+          "--no-warnings",
+          "--geo-bypass",
+          "--extractor-args", "youtube:player_client=android",
+          query,
+        ]
+      : [
+          "--dump-json",
+          "--no-playlist",
+          "--quiet",
+          "--no-warnings",
+          "--geo-bypass",
+          "--extractor-args", "youtube:player_client=android",
+          `ytsearch${limit}:${query}`,
+        ];
+
+    const result = await new Promise<string>((resolve, reject) => {
+      const proc = spawn(YTDLP_PATH, args);
+      let output = "";
+      proc.stdout.on("data", (chunk: Buffer) => (output += chunk.toString()));
+      proc.stderr.on("data", (chunk: Buffer) => console.log(chunk.toString()));
+      proc.on("close", () => resolve(output));
+      proc.on("error", reject);
+    });
+
+    const songs: Song[] = [];
+    for (const line of result.trim().split("\n")) {
+      if (!line.trim()) continue;
+      try {
+        const data = JSON.parse(line);
+        songs.push({
+          title: data.title ?? "Unknown",
+          url: data.webpage_url ?? data.url,
+          duration: formatDuration(data.duration ?? 0),
+          thumbnail: data.thumbnail ?? "",
           requestedBy: "",
           requestedById: "",
-        },
-      ];
+        });
+      } catch {
+        // skip bad lines
+      }
     }
-
-    if (play.yt_validate(query) === "playlist") {
-      const playlist = await play.playlist_info(query, { incomplete: true });
-      const videos = await playlist.all_videos();
-      return videos.slice(0, 50).map((v) => ({
-        title: v.title ?? "Unknown",
-        url: v.url,
-        duration: formatDuration(v.durationInSec),
-        thumbnail: v.thumbnails?.[0]?.url ?? "",
-        requestedBy: "",
-        requestedById: "",
-      }));
-    }
-
-    const results = await play.search(query, {
-      source: { youtube: "video" },
-      limit,
-    });
-    return results.map((v) => ({
-      title: v.title ?? "Unknown",
-      url: v.url,
-      duration: formatDuration(v.durationInSec),
-      thumbnail: v.thumbnails?.[0]?.url ?? "",
-      requestedBy: "",
-      requestedById: "",
-    }));
+    return songs;
   } catch (err) {
     logger.error({ err }, "Error searching songs");
     return [];
