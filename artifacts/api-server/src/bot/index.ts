@@ -16,6 +16,11 @@ import { onMessageCreate } from "./events/messageCreate.js";
 import { onVoiceStateUpdate } from "./events/voiceStateUpdate.js";
 import { logger } from "../lib/logger.js";
 import { ensureYtDlp } from "./lib/music.js";
+import { migrate } from "drizzle-orm/node-postgres/migrator";
+import path from "path";
+import { fileURLToPath } from "url";
+
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
 export let botClient: Client | null = null;
 export const botStartTime = Date.now();
@@ -128,6 +133,26 @@ export async function startBot(): Promise<void> {
   if (!token) {
     logger.warn("DISCORD_BOT_TOKEN not set — bot will not start");
     return;
+  }
+
+  // Run database migrations on startup
+  try {
+    const migrationsFolder = path.resolve(__dirname, "../../../../../lib/db/drizzle");
+    await migrate(db, { migrationsFolder });
+    logger.info("Database migrations applied");
+  } catch (err) {
+    logger.warn({ err }, "Migration failed — using drizzle-kit push fallback");
+    // Fallback: use drizzle-kit push via child process
+    const { execSync } = await import("child_process");
+    try {
+      execSync("cd /opt/render/project/src/lib/db && npx drizzle-kit push", {
+        env: { ...process.env },
+        stdio: "inherit",
+      });
+      logger.info("drizzle-kit push completed");
+    } catch (pushErr) {
+      logger.warn({ pushErr }, "drizzle-kit push also failed, continuing anyway");
+    }
   }
 
   await ensureYtDlp();
