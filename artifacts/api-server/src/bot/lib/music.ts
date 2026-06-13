@@ -24,15 +24,14 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const BIN_DIR = path.resolve(__dirname, "../../../../bin");
 const YTDLP_PATH = path.join(BIN_DIR, "yt-dlp");
 const COOKIES_PATH = existsSync("/opt/render/project/src/artifacts/api-server/cookies.txt")
-? "/opt/render/project/src/artifacts/api-server/cookies.txt"
-: path.resolve(__dirname, "../../../cookies.txt");
+  ? "/opt/render/project/src/artifacts/api-server/cookies.txt"
+  : path.resolve(__dirname, "../../../cookies.txt");
 const YTDLP_URL =
   "https://github.com/yt-dlp/yt-dlp/releases/latest/download/yt-dlp_linux";
 
 export async function ensureYtDlp(): Promise<void> {
-  if (existsSync(YTDLP_PATH)) return;
-  logger.info("yt-dlp not found, downloading...");
   await mkdir(BIN_DIR, { recursive: true });
+  logger.info("Downloading/updating yt-dlp...");
   await new Promise<void>((resolve, reject) => {
     const proc = spawn("curl", ["-sL", YTDLP_URL, "-o", YTDLP_PATH]);
     proc.on("close", (code) =>
@@ -41,7 +40,7 @@ export async function ensureYtDlp(): Promise<void> {
     proc.on("error", reject);
   });
   await chmod(YTDLP_PATH, 0o755);
-  logger.info("yt-dlp downloaded successfully");
+  logger.info("yt-dlp updated successfully");
 }
 
 // Spotify token cache
