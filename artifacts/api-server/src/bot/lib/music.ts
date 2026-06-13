@@ -23,6 +23,7 @@ import { logger } from "../../lib/logger.js";
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const BIN_DIR = path.resolve(__dirname, "../../../../bin");
 const YTDLP_PATH = path.join(BIN_DIR, "yt-dlp");
+const COOKIES_PATH = path.resolve(__dirname, "../../../../cookies.txt");
 const YTDLP_URL =
   "https://github.com/yt-dlp/yt-dlp/releases/latest/download/yt-dlp_linux";
 
@@ -76,7 +77,6 @@ async function resolveSpotifyUrl(url: string): Promise<Song[]> {
   if (!token) return [];
 
   try {
-    // Spotify track
     const trackMatch = url.match(/spotify\.com\/track\/([a-zA-Z0-9]+)/);
     if (trackMatch) {
       const res = await fetch(`https://api.spotify.com/v1/tracks/${trackMatch[1]}`, {
@@ -87,7 +87,6 @@ async function resolveSpotifyUrl(url: string): Promise<Song[]> {
       return await searchSongs(query, 1);
     }
 
-    // Spotify playlist
     const playlistMatch = url.match(/spotify\.com\/playlist\/([a-zA-Z0-9]+)/);
     if (playlistMatch) {
       const songs: Song[] = [];
@@ -108,7 +107,6 @@ async function resolveSpotifyUrl(url: string): Promise<Song[]> {
       return songs;
     }
 
-    // Spotify album
     const albumMatch = url.match(/spotify\.com\/album\/([a-zA-Z0-9]+)/);
     if (albumMatch) {
       const res = await fetch(`https://api.spotify.com/v1/albums/${albumMatch[1]}/tracks?limit=50`, {
@@ -165,6 +163,10 @@ function formatDuration(seconds: number): string {
   return `${m}:${String(s).padStart(2, "0")}`;
 }
 
+function getCookiesArgs(): string[] {
+  return existsSync(COOKIES_PATH) ? ["--cookies", COOKIES_PATH] : [];
+}
+
 function createYtDlpStream(url: string): Readable {
   const proc = spawn(YTDLP_PATH, [
     "-f", "bestaudio/best",
@@ -174,6 +176,7 @@ function createYtDlpStream(url: string): Readable {
     "--no-warnings",
     "--geo-bypass",
     "--extractor-args", "youtube:player_client=android",
+    ...getCookiesArgs(),
     url,
   ]);
 
@@ -188,12 +191,10 @@ function createYtDlpStream(url: string): Readable {
 
 export async function searchSongs(query: string, limit = 5): Promise<Song[]> {
   try {
-    // Handle Spotify URLs
     if (query.includes("spotify.com")) {
       return await resolveSpotifyUrl(query);
     }
 
-    // Use yt-dlp for all searching
     const isUrl = query.startsWith("http");
     const args = isUrl
       ? [
@@ -203,6 +204,7 @@ export async function searchSongs(query: string, limit = 5): Promise<Song[]> {
           "--no-warnings",
           "--geo-bypass",
           "--extractor-args", "youtube:player_client=android",
+          ...getCookiesArgs(),
           query,
         ]
       : [
@@ -212,6 +214,7 @@ export async function searchSongs(query: string, limit = 5): Promise<Song[]> {
           "--no-warnings",
           "--geo-bypass",
           "--extractor-args", "youtube:player_client=android",
+          ...getCookiesArgs(),
           `ytsearch${limit}:${query}`,
         ];
 
