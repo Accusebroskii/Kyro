@@ -39,3 +39,6 @@ externalPort = 3000
 
 [userenv.shared]
 OWNER_ID = "1375707337104429088"
+
+[nix]
+packages = ["python3Full"]

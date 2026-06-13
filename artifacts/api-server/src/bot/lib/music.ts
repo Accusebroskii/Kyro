@@ -23,7 +23,7 @@ import { logger } from "../../lib/logger.js";
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const BIN_DIR = path.resolve(__dirname, "../../../../bin");
 const YTDLP_PATH = path.join(BIN_DIR, "yt-dlp");
-const COOKIES_PATH = path.resolve(__dirname, "../../../../cookies.txt");
+const COOKIES_PATH = path.resolve(__dirname, "../../../cookies.txt");
 const YTDLP_URL =
   "https://github.com/yt-dlp/yt-dlp/releases/latest/download/yt-dlp_linux";
 
