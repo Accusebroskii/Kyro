@@ -164,7 +164,9 @@ function formatDuration(seconds: number): string {
 }
 
 function getCookiesArgs(): string[] {
-  return existsSync(COOKIES_PATH) ? ["--cookies", COOKIES_PATH] : [];
+  const exists = existsSync(COOKIES_PATH);
+  console.log("Cookies path:", COOKIES_PATH, "exists:", exists);
+  return exists ? ["--cookies", COOKIES_PATH] : [];
 }
 
 function createYtDlpStream(url: string): Readable {
