@@ -7,7 +7,7 @@ import {
   ChannelType,
 } from "discord.js";
 import { db, guildConfigTable, modmailTable } from "@workspace/db";
-import { eq, and } from "drizzle-orm";
+import { eq, and, sql } from "drizzle-orm";
 import { onReady } from "./events/ready.js";
 import { onGuildCreate } from "./events/guildCreate.js";
 import { onGuildMemberAdd } from "./events/guildMemberAdd.js";
@@ -16,11 +16,6 @@ import { onMessageCreate } from "./events/messageCreate.js";
 import { onVoiceStateUpdate } from "./events/voiceStateUpdate.js";
 import { logger } from "../lib/logger.js";
 import { ensureYtDlp } from "./lib/music.js";
-import { migrate } from "drizzle-orm/node-postgres/migrator";
-import path from "path";
-import { fileURLToPath } from "url";
-
-const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
 export let botClient: Client | null = null;
 export const botStartTime = Date.now();
@@ -54,7 +49,6 @@ export function createBotClient(): Client {
     const user = message.author;
     const content = message.content;
 
-    // Find guilds with modmail configured where the user is a member
     const allConfigs = await db.select().from(guildConfigTable);
     const guildsWithForum = allConfigs.filter((c) => c.modmailForumId);
 
@@ -63,7 +57,6 @@ export function createBotClient(): Client {
       return;
     }
 
-    // Use the first guild that has modmail configured where the user is a member
     for (const config of guildsWithForum) {
       const guild = client.guilds.cache.get(config.guildId);
       if (!guild) continue;
@@ -76,13 +69,11 @@ export function createBotClient(): Client {
       }
       if (!member) continue;
 
-      // Check for existing open modmail thread
       const [existing] = await db.select().from(modmailTable)
         .where(and(eq(modmailTable.guildId, config.guildId), eq(modmailTable.userId, user.id), eq(modmailTable.status, "open")))
         .limit(1);
 
       if (existing && existing.threadChannelId) {
-        // Forward message to existing thread
         const threadChannel = guild.channels.cache.get(existing.threadChannelId) as TextChannel | undefined;
         if (threadChannel) {
           await threadChannel.send(`**${user.tag}:** ${content}`);
@@ -90,7 +81,6 @@ export function createBotClient(): Client {
         }
       }
 
-      // Open new modmail thread
       try {
         const forumChannel = guild.channels.cache.get(
           process.env.MODMAIL_FORUM_ID!
@@ -135,24 +125,69 @@ export async function startBot(): Promise<void> {
     return;
   }
 
-  // Run database migrations on startup
+  // Create tables if they don't exist
   try {
-    const migrationsFolder = path.resolve(__dirname, "../../../../../lib/db/drizzle");
-    await migrate(db, { migrationsFolder });
-    logger.info("Database migrations applied");
+    await db.execute(sql`
+      CREATE TABLE IF NOT EXISTS guild_config (
+        id SERIAL PRIMARY KEY, guild_id TEXT NOT NULL UNIQUE, guild_name TEXT, guild_icon_url TEXT,
+        member_count INTEGER, welcome_channel_id TEXT, welcome_message TEXT, log_channel_id TEXT,
+        mod_log_channel_id TEXT, ticket_category_id TEXT, ticket_log_channel_id TEXT,
+        ticket_counter INTEGER DEFAULT 0, modmail_forum_id TEXT, mute_role_id TEXT,
+        mod_role_id TEXT, admin_role_id TEXT, owner_id TEXT, antispam_enabled BOOLEAN DEFAULT false,
+        anti_raid_enabled BOOLEAN DEFAULT false, automod_enabled BOOLEAN DEFAULT false,
+        join_to_create_channel_id TEXT, join_to_create_category_id TEXT, max_warnings INTEGER DEFAULT 3,
+        created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(), updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+      );
+      CREATE TABLE IF NOT EXISTS tickets (
+        id SERIAL PRIMARY KEY, guild_id TEXT NOT NULL, ticket_number INTEGER NOT NULL,
+        user_id TEXT NOT NULL, user_tag TEXT NOT NULL, subject TEXT, channel_id TEXT,
+        status TEXT NOT NULL DEFAULT 'open', claimed_by TEXT, claimed_by_tag TEXT,
+        closed_by TEXT, closed_reason TEXT, created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+        closed_at TIMESTAMP WITH TIME ZONE
+      );
+      CREATE TABLE IF NOT EXISTS ticket_topics (
+        id SERIAL PRIMARY KEY, guild_id TEXT NOT NULL, label TEXT NOT NULL,
+        description TEXT, emoji TEXT DEFAULT '📩', created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+      );
+      CREATE TABLE IF NOT EXISTS mod_logs (
+        id SERIAL PRIMARY KEY, guild_id TEXT NOT NULL, target_id TEXT NOT NULL,
+        target_tag TEXT NOT NULL, moderator_id TEXT NOT NULL, moderator_tag TEXT NOT NULL,
+        action TEXT NOT NULL, reason TEXT, duration INTEGER,
+        created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+      );
+      CREATE TABLE IF NOT EXISTS warnings (
+        id SERIAL PRIMARY KEY, guild_id TEXT NOT NULL, user_id TEXT NOT NULL,
+        user_tag TEXT NOT NULL, moderator_id TEXT NOT NULL, moderator_tag TEXT NOT NULL,
+        reason TEXT, created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+      );
+      CREATE TABLE IF NOT EXISTS modmail_threads (
+        id SERIAL PRIMARY KEY, guild_id TEXT NOT NULL, user_id TEXT NOT NULL,
+        user_tag TEXT NOT NULL, subject TEXT, thread_channel_id TEXT,
+        status TEXT NOT NULL DEFAULT 'open', closed_by TEXT, closed_reason TEXT,
+        created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(), closed_at TIMESTAMP WITH TIME ZONE
+      );
+      CREATE TABLE IF NOT EXISTS auto_roles (
+        id SERIAL PRIMARY KEY, guild_id TEXT NOT NULL, role_id TEXT NOT NULL, role_name TEXT NOT NULL,
+        created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+      );
+      CREATE TABLE IF NOT EXISTS music_playlists (
+        id SERIAL PRIMARY KEY, guild_id TEXT NOT NULL, name TEXT NOT NULL,
+        created_by TEXT NOT NULL, created_by_tag TEXT NOT NULL, created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+      );
+      CREATE TABLE IF NOT EXISTS music_playlist_songs (
+        id SERIAL PRIMARY KEY, playlist_id INTEGER NOT NULL, title TEXT NOT NULL,
+        url TEXT NOT NULL, duration TEXT NOT NULL, thumbnail TEXT NOT NULL
+      );
+      CREATE TABLE IF NOT EXISTS reports (
+        id SERIAL PRIMARY KEY, guild_id TEXT NOT NULL, reporter_id TEXT NOT NULL,
+        reporter_tag TEXT NOT NULL, target_id TEXT NOT NULL, target_tag TEXT NOT NULL,
+        reason TEXT, message_id TEXT, channel_id TEXT, status TEXT NOT NULL DEFAULT 'open',
+        created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+      );
+    `);
+    logger.info("Database tables created/verified");
   } catch (err) {
-    logger.warn({ err }, "Migration failed — using drizzle-kit push fallback");
-    // Fallback: use drizzle-kit push via child process
-    const { execSync } = await import("child_process");
-    try {
-      execSync("cd /opt/render/project/src/lib/db && npx drizzle-kit push", {
-        env: { ...process.env },
-        stdio: "inherit",
-      });
-      logger.info("drizzle-kit push completed");
-    } catch (pushErr) {
-      logger.warn({ pushErr }, "drizzle-kit push also failed, continuing anyway");
-    }
+    logger.warn({ err }, "Table creation failed, continuing anyway");
   }
 
   await ensureYtDlp();
