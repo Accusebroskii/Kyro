@@ -5,9 +5,16 @@ import { logger } from "../../lib/logger.js";
 
 const spamTracker = new Map<string, { count: number; lastMessage: number; warned: boolean }>();
 
+const KALEIGH_USER_ID = "1492136743493828790";
+
 export async function onMessageCreate(message: Message): Promise<void> {
   if (message.author.bot || !message.guild) return;
   const guildId = message.guild.id;
+
+  // Sniper Duels ping
+  if (message.content.toLowerCase().includes("sniper duels")) {
+    message.channel.send(`<@${KALEIGH_USER_ID}>`).catch(() => {});
+  }
 
   // ModMail: if a staff member types in a modmail thread, forward it to the user
   try {
