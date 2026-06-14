@@ -478,7 +478,8 @@ export function getCurrentSong(guildId: string): Song | null {
 export function getQueueList(guildId: string): {
   current: Song | null;
   upcoming: Song[];
-  total: number;
+  total: number;x
+  
 } {
   const q = queues.get(guildId);
   if (!q) return { current: null, upcoming: [], total: 0 };

@@ -6,9 +6,11 @@ import {
   EmbedBuilder,
   TextChannel,
   ActionRowBuilder,
+  ButtonBuilder,
+  ButtonStyle,
   StringSelectMenuBuilder,
 } from "discord.js";
-import { db, guildConfigTable, autoRolesTable, ticketTopicsTable } from "@workspace/db";
+import { db, guildConfigTable, autoRolesTable, ticketTopicsTable, ticketPanelsTable } from "@workspace/db";
 import { eq, and } from "drizzle-orm";
 import { checkAdmin } from "../lib/permissions.js";
 import { successEmbed, errorEmbed, infoEmbed } from "../lib/embeds.js";
@@ -30,21 +32,30 @@ export const setupCommand = {
     .addSubcommand((s) =>
       s.setName("tickets").setDescription("Configure the ticket system")
         .addChannelOption((o) => o.setName("category").setDescription("Category for ticket channels").addChannelTypes(ChannelType.GuildCategory))
-        .addChannelOption((o) => o.setName("logchannel").setDescription("Ticket log channel").addChannelTypes(ChannelType.GuildText))
-        .addChannelOption((o) => o.setName("panelchannel").setDescription("Channel to send the ticket panel to").addChannelTypes(ChannelType.GuildText)),
+        .addChannelOption((o) => o.setName("logchannel").setDescription("Ticket log channel").addChannelTypes(ChannelType.GuildText)),
     )
     .addSubcommand((s) =>
-      s.setName("addtopic").setDescription("Add a topic to the ticket panel")
+      s.setName("panel").setDescription("Send a ticket panel to a channel")
+        .addStringOption((o) => o.setName("name").setDescription("Panel name e.g. support").setRequired(true))
+        .addStringOption((o) => o.setName("title").setDescription("Panel title e.g. Help and Support").setRequired(true))
+        .addChannelOption((o) => o.setName("channel").setDescription("Channel to send panel to").setRequired(true).addChannelTypes(ChannelType.GuildText))
+        .addStringOption((o) => o.setName("description").setDescription("Panel description")),
+    )
+    .addSubcommand((s) =>
+      s.setName("addtopic").setDescription("Add a topic to a ticket panel")
+        .addStringOption((o) => o.setName("panel").setDescription("Panel name to add topic to").setRequired(true))
         .addStringOption((o) => o.setName("name").setDescription("Topic name e.g. Staff Report").setRequired(true))
         .addStringOption((o) => o.setName("description").setDescription("Short description shown in the panel"))
         .addStringOption((o) => o.setName("emoji").setDescription("Emoji for this topic e.g. 📩")),
     )
     .addSubcommand((s) =>
-      s.setName("removetopic").setDescription("Remove a topic from the ticket panel")
+      s.setName("removetopic").setDescription("Remove a topic from a panel")
+        .addStringOption((o) => o.setName("panel").setDescription("Panel name").setRequired(true))
         .addStringOption((o) => o.setName("name").setDescription("Exact topic name to remove").setRequired(true)),
     )
     .addSubcommand((s) =>
-      s.setName("listtopics").setDescription("List all ticket topics for this server"),
+      s.setName("listtopics").setDescription("List all ticket topics for a panel")
+        .addStringOption((o) => o.setName("panel").setDescription("Panel name (leave empty for all)") ),
     )
     .addSubcommand((s) =>
       s.setName("automod").setDescription("Toggle auto-moderation features")
@@ -104,34 +115,34 @@ export const setupCommand = {
     } else if (sub === "tickets") {
       const cat = interaction.options.getChannel("category");
       const log = interaction.options.getChannel("logchannel");
-      const panelChannel = interaction.options.getChannel("panelchannel");
-
       await db.update(guildConfigTable).set({
         ...(cat ? { ticketCategoryId: cat.id } : {}),
         ...(log ? { ticketLogChannelId: log.id } : {}),
       }).where(eq(guildConfigTable.guildId, guildId));
+      await interaction.reply({ embeds: [successEmbed("Tickets Configured", "Ticket system updated.")] });
 
-      if (panelChannel) {
-        const topics = await db.select().from(ticketTopicsTable).where(eq(ticketTopicsTable.guildId, guildId));
-        if (topics.length === 0) {
-          await interaction.reply({ embeds: [errorEmbed("No topics set! Use `/setup addtopic` to add topics first.")], ephemeral: true });
-          return;
-        }
+    } else if (sub === "panel") {
+      const panelName = interaction.options.getString("name", true);
+      const title = interaction.options.getString("title", true);
+      const description = interaction.options.getString("description") ?? "To create a ticket use the Create ticket button";
+      const panelChannel = interaction.options.getChannel("channel", true);
 
-        const channel = interaction.guild!.channels.cache.get(panelChannel.id) as TextChannel;
+      const topics = await db.select().from(ticketTopicsTable).where(
+        and(eq(ticketTopicsTable.guildId, guildId), eq(ticketTopicsTable.panelName, panelName))
+      );
 
-        const embed = new EmbedBuilder()
-          .setTitle(`${interaction.guild!.name}, Server Support`)
-          .setColor(0x5865f2)
-          .setDescription(
-            "Welcome to the Ticket Center! Select a topic below to open a ticket.\n\n" +
-            topics.map((t) => `**${t.label}** — ${t.description ?? ""}`).join("\n\n")
-          )
-          .setFooter({ text: "Any inactivity over 12 hours may result in closure." });
+      const channel = interaction.guild!.channels.cache.get(panelChannel.id) as TextChannel;
 
+      const embed = new EmbedBuilder()
+        .setTitle(title)
+        .setColor(0x5865f2)
+        .setDescription(description);
+
+      // If topics exist use dropdown, otherwise just a button
+      if (topics.length > 0) {
         const row = new ActionRowBuilder<StringSelectMenuBuilder>().addComponents(
           new StringSelectMenuBuilder()
-            .setCustomId("ticket_panel_select")
+            .setCustomId(`ticket_panel_select:${panelName}`)
             .setPlaceholder("Select a topic...")
             .addOptions(topics.map((t) => ({
               label: t.label,
@@ -140,39 +151,55 @@ export const setupCommand = {
               emoji: t.emoji ?? "📩",
             })))
         );
-
+        await channel.send({ embeds: [embed], components: [row] });
+      } else {
+        const row = new ActionRowBuilder<ButtonBuilder>().addComponents(
+          new ButtonBuilder()
+            .setCustomId(`ticket_create:${panelName}`)
+            .setLabel("Create ticket")
+            .setStyle(ButtonStyle.Secondary)
+            .setEmoji("📨"),
+        );
         await channel.send({ embeds: [embed], components: [row] });
       }
 
-      await interaction.reply({
-        embeds: [successEmbed("Tickets Configured", `Ticket system updated.${panelChannel ? ` Panel sent to <#${panelChannel.id}>.` : ""}`)],
-      });
+      await db.insert(ticketPanelsTable).values({ guildId, panelName, title, description, channelId: panelChannel.id }).catch(() => {});
+      await interaction.reply({ embeds: [successEmbed("Panel Sent", `Panel **${panelName}** sent to <#${panelChannel.id}>.`)] });
 
     } else if (sub === "addtopic") {
+      const panelName = interaction.options.getString("panel", true);
       const label = interaction.options.getString("name", true);
       const description = interaction.options.getString("description") ?? undefined;
       const emoji = interaction.options.getString("emoji") ?? "📩";
 
-      const existing = await db.select().from(ticketTopicsTable).where(eq(ticketTopicsTable.guildId, guildId));
-      if (existing.length >= 25) {
-        await interaction.reply({ embeds: [errorEmbed("You can have a maximum of 25 topics.")], ephemeral: true });
+      const existingTopics = await db.select().from(ticketTopicsTable).where(
+        and(eq(ticketTopicsTable.guildId, guildId), eq(ticketTopicsTable.panelName, panelName))
+      );
+      if (existingTopics.length >= 25) {
+        await interaction.reply({ embeds: [errorEmbed("You can have a maximum of 25 topics per panel.")], ephemeral: true });
         return;
       }
 
-      await db.insert(ticketTopicsTable).values({ guildId, label, description, emoji });
-      await interaction.reply({ embeds: [successEmbed("Topic Added", `Topic **${label}** added to the ticket panel.`)] });
+      await db.insert(ticketTopicsTable).values({ guildId, panelName, label, description, emoji });
+      await interaction.reply({ embeds: [successEmbed("Topic Added", `Topic **${label}** added to panel **${panelName}**.`)] });
 
     } else if (sub === "removetopic") {
+      const panelName = interaction.options.getString("panel", true);
       const label = interaction.options.getString("name", true);
-      await db.delete(ticketTopicsTable).where(and(eq(ticketTopicsTable.guildId, guildId), eq(ticketTopicsTable.label, label)));
-      await interaction.reply({ embeds: [successEmbed("Topic Removed", `Topic **${label}** removed.`)] });
+      await db.delete(ticketTopicsTable).where(
+        and(eq(ticketTopicsTable.guildId, guildId), eq(ticketTopicsTable.panelName, panelName), eq(ticketTopicsTable.label, label))
+      );
+      await interaction.reply({ embeds: [successEmbed("Topic Removed", `Topic **${label}** removed from panel **${panelName}**.`)] });
 
     } else if (sub === "listtopics") {
-      const topics = await db.select().from(ticketTopicsTable).where(eq(ticketTopicsTable.guildId, guildId));
+      const panelName = interaction.options.getString("panel");
+      const topics = panelName
+        ? await db.select().from(ticketTopicsTable).where(and(eq(ticketTopicsTable.guildId, guildId), eq(ticketTopicsTable.panelName, panelName)))
+        : await db.select().from(ticketTopicsTable).where(eq(ticketTopicsTable.guildId, guildId));
       await interaction.reply({
         embeds: [infoEmbed("Ticket Topics", topics.length
-          ? topics.map((t) => `${t.emoji} **${t.label}**${t.description ? ` — ${t.description}` : ""}`).join("\n")
-          : "No topics set. Use `/setup addtopic` to add some.")],
+          ? topics.map((t) => `${t.emoji} **[${t.panelName}]** ${t.label}${t.description ? ` — ${t.description}` : ""}`).join("\n")
+          : "No topics found.")],
         ephemeral: true,
       });
 

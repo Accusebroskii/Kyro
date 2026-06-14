@@ -10,6 +10,7 @@ import {
   ButtonBuilder,
   ButtonStyle,
   StringSelectMenuInteraction,
+  ButtonInteraction,
 } from "discord.js";
 import { db, ticketsTable, guildConfigTable } from "@workspace/db";
 import { eq, and } from "drizzle-orm";
@@ -86,7 +87,7 @@ export const ticketCommand = {
   },
 };
 
-async function openTicket({ guildId, guild, userId, userTag, subject }: {
+export async function openTicket({ guildId, guild, userId, userTag, subject }: {
   guildId: string;
   guild: any;
   userId: string;
@@ -132,8 +133,7 @@ async function openTicket({ guildId, guild, userId, userTag, subject }: {
 }
 
 export async function handleTicketPanelSelect(interaction: StringSelectMenuInteraction) {
-  const subject = interaction.values[0];
-
+  const subject = interaction.values[0]!;
   const { channel } = await openTicket({
     guildId: interaction.guildId!,
     guild: interaction.guild!,
@@ -141,6 +141,17 @@ export async function handleTicketPanelSelect(interaction: StringSelectMenuInter
     userTag: interaction.user.tag,
     subject,
   });
+  await interaction.reply({ content: `Your ticket has been created: ${channel}`, ephemeral: true });
+}
 
+export async function handleTicketCreate(interaction: ButtonInteraction) {
+  const panelName = interaction.customId.replace("ticket_create:", "");
+  const { channel } = await openTicket({
+    guildId: interaction.guildId!,
+    guild: interaction.guild!,
+    userId: interaction.user.id,
+    userTag: interaction.user.tag,
+    subject: panelName,
+  });
   await interaction.reply({ content: `Your ticket has been created: ${channel}`, ephemeral: true });
 }

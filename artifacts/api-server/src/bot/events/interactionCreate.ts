@@ -10,7 +10,7 @@ import { db, ticketsTable } from "@workspace/db";
 import { eq } from "drizzle-orm";
 import { logger } from "../../lib/logger.js";
 import { successEmbed } from "../lib/embeds.js";
-import { handleTicketPanelSelect } from "../commands/tickets.js";
+import { handleTicketPanelSelect, handleTicketCreate } from "../commands/tickets.js";
 
 export async function onInteractionCreate(interaction: Interaction): Promise<void> {
   // Handle slash commands
@@ -34,7 +34,7 @@ export async function onInteractionCreate(interaction: Interaction): Promise<voi
   // Handle select menu interactions
   if (interaction.isStringSelectMenu()) {
     const select = interaction as StringSelectMenuInteraction;
-    if (select.customId === "ticket_panel_select") {
+    if (select.customId.startsWith("ticket_panel_select")) {
       await handleTicketPanelSelect(select);
       return;
     }
@@ -43,6 +43,12 @@ export async function onInteractionCreate(interaction: Interaction): Promise<voi
   // Handle button interactions
   if (interaction.isButton()) {
     const btn = interaction as ButtonInteraction;
+
+    if (btn.customId.startsWith("ticket_create:")) {
+      await handleTicketCreate(btn);
+      return;
+    }
+
     if (btn.customId.startsWith("ticket_close_")) {
       const ticketId = parseInt(btn.customId.replace("ticket_close_", ""), 10);
       const [ticket] = await db.select().from(ticketsTable).where(eq(ticketsTable.id, ticketId)).limit(1);

@@ -22,9 +22,20 @@ export const ticketsTable = pgTable("tickets", {
 export const ticketTopicsTable = pgTable("ticket_topics", {
   id: serial("id").primaryKey(),
   guildId: text("guild_id").notNull(),
+  panelName: text("panel_name").notNull().default("default"),
   label: text("label").notNull(),
   description: text("description"),
   emoji: text("emoji").default("📩"),
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+});
+
+export const ticketPanelsTable = pgTable("ticket_panels", {
+  id: serial("id").primaryKey(),
+  guildId: text("guild_id").notNull(),
+  panelName: text("panel_name").notNull(),
+  title: text("title").notNull(),
+  description: text("description"),
+  channelId: text("channel_id"),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
 });
 
@@ -32,3 +43,4 @@ export const insertTicketSchema = createInsertSchema(ticketsTable).omit({ id: tr
 export type InsertTicket = z.infer<typeof insertTicketSchema>;
 export type Ticket = typeof ticketsTable.$inferSelect;
 export type TicketTopic = typeof ticketTopicsTable.$inferSelect;
+export type TicketPanel = typeof ticketPanelsTable.$inferSelect;
