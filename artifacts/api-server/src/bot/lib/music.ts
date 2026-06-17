@@ -13,7 +13,7 @@ import {
 import { Guild, TextChannel, VoiceBasedChannel } from "discord.js";
 import { spawn } from "child_process";
 import { Readable } from "stream";
-import { existsSync } from "fs";
+import { existsSync, writeFileSync } from "fs";
 import { chmod, mkdir } from "fs/promises";
 import path from "path";
 import { fileURLToPath } from "url";
@@ -28,6 +28,15 @@ const COOKIES_PATH = existsSync("/opt/render/project/src/artifacts/api-server/co
   : path.resolve(__dirname, "../../../cookies.txt");
 const YTDLP_URL =
   "https://github.com/yt-dlp/yt-dlp/releases/latest/download/yt-dlp_linux";
+
+if (process.env.YT_COOKIES && !existsSync(COOKIES_PATH)) {
+  try {
+    writeFileSync(COOKIES_PATH, process.env.YT_COOKIES);
+    logger.info("Wrote YouTube cookies from YT_COOKIES env var");
+  } catch (err) {
+    logger.error({ err }, "Failed to write cookies.txt from env var");
+  }
+}
 
 export async function ensureYtDlp(): Promise<void> {
   await mkdir(BIN_DIR, { recursive: true });
@@ -478,8 +487,7 @@ export function getCurrentSong(guildId: string): Song | null {
 export function getQueueList(guildId: string): {
   current: Song | null;
   upcoming: Song[];
-  total: number;x
-  
+  total: number;
 } {
   const q = queues.get(guildId);
   if (!q) return { current: null, upcoming: [], total: 0 };
