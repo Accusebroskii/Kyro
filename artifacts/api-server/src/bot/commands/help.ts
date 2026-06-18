@@ -4,7 +4,7 @@ import {
   EmbedBuilder,
 } from "discord.js";
 
-const COMMAND_CATEGORIES: Record<
+const COMMAND_CATEGORIES: Record
   string,
   { emoji: string; commands: Array<{ name: string; description: string }> }
 > = {
@@ -190,6 +190,12 @@ const COMMAND_CATEGORIES: Record<
       },
     ],
   },
+  General: {
+    emoji: "🔗",
+    commands: [
+      { name: "/invite", description: "Get the link to our support server" },
+    ],
+  },
 };
 
 export const helpCommand = {
@@ -212,6 +218,7 @@ export const helpCommand = {
           { name: "Utility", value: "Utility" },
           { name: "Security", value: "Security" },
           { name: "Voice", value: "Voice" },
+          { name: "General", value: "General" },
         ),
     ),
   async execute(interaction: ChatInputCommandInteraction) {
