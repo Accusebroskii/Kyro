@@ -4,7 +4,7 @@ import {
   EmbedBuilder,
 } from "discord.js";
 
-const COMMAND_CATEGORIES: Record
+const COMMAND_CATEGORIES: Record<
   string,
   { emoji: string; commands: Array<{ name: string; description: string }> }
 > = {
