@@ -4,16 +4,12 @@ import {
   PermissionFlagsBits,
   ChannelType,
   EmbedBuilder,
-  TextChannel,
-  ActionRowBuilder,
-  ButtonBuilder,
-  ButtonStyle,
-  StringSelectMenuBuilder,
 } from "discord.js";
-import { db, guildConfigTable, autoRolesTable, ticketTopicsTable, ticketPanelsTable } from "@workspace/db";
+import { db, guildConfigTable, autoRolesTable, ticketTopicsTable } from "@workspace/db";
 import { eq, and } from "drizzle-orm";
 import { checkAdmin } from "../lib/permissions.js";
 import { successEmbed, errorEmbed, infoEmbed } from "../lib/embeds.js";
+import { startPanelBuilder, initialBuilderPayload } from "../lib/panelBuilder.js";
 
 export const setupCommand = {
   data: new SlashCommandBuilder()
@@ -35,11 +31,8 @@ export const setupCommand = {
         .addChannelOption((o) => o.setName("logchannel").setDescription("Ticket log channel").addChannelTypes(ChannelType.GuildText)),
     )
     .addSubcommand((s) =>
-      s.setName("panel").setDescription("Send a ticket panel to a channel")
-        .addStringOption((o) => o.setName("name").setDescription("Panel name e.g. support").setRequired(true))
-        .addStringOption((o) => o.setName("title").setDescription("Panel title e.g. Help and Support").setRequired(true))
-        .addChannelOption((o) => o.setName("channel").setDescription("Channel to send panel to").setRequired(true).addChannelTypes(ChannelType.GuildText))
-        .addStringOption((o) => o.setName("description").setDescription("Panel description")),
+      s.setName("panel").setDescription("Open the interactive ticket panel builder")
+        .addStringOption((o) => o.setName("name").setDescription("Internal panel name e.g. support").setRequired(true)),
     )
     .addSubcommand((s) =>
       s.setName("addtopic").setDescription("Add a topic to a ticket panel")
@@ -123,48 +116,8 @@ export const setupCommand = {
 
     } else if (sub === "panel") {
       const panelName = interaction.options.getString("name", true);
-      const title = interaction.options.getString("title", true);
-      const description = interaction.options.getString("description") ?? "To create a ticket use the Create ticket button";
-      const panelChannel = interaction.options.getChannel("channel", true);
-
-      const topics = await db.select().from(ticketTopicsTable).where(
-        and(eq(ticketTopicsTable.guildId, guildId), eq(ticketTopicsTable.panelName, panelName))
-      );
-
-      const channel = interaction.guild!.channels.cache.get(panelChannel.id) as TextChannel;
-
-      const embed = new EmbedBuilder()
-        .setTitle(title)
-        .setColor(0x5865f2)
-        .setDescription(description);
-
-      // If topics exist use dropdown, otherwise just a button
-      if (topics.length > 0) {
-        const row = new ActionRowBuilder<StringSelectMenuBuilder>().addComponents(
-          new StringSelectMenuBuilder()
-            .setCustomId(`ticket_panel_select:${panelName}`)
-            .setPlaceholder("Select a topic...")
-            .addOptions(topics.map((t) => ({
-              label: t.label,
-              value: t.label,
-              description: t.description ?? undefined,
-              emoji: t.emoji ?? "📩",
-            })))
-        );
-        await channel.send({ embeds: [embed], components: [row] });
-      } else {
-        const row = new ActionRowBuilder<ButtonBuilder>().addComponents(
-          new ButtonBuilder()
-            .setCustomId(`ticket_create:${panelName}`)
-            .setLabel("Create ticket")
-            .setStyle(ButtonStyle.Secondary)
-            .setEmoji("📨"),
-        );
-        await channel.send({ embeds: [embed], components: [row] });
-      }
-
-      await db.insert(ticketPanelsTable).values({ guildId, panelName, title, description, channelId: panelChannel.id }).catch(() => {});
-      await interaction.reply({ embeds: [successEmbed("Panel Sent", `Panel **${panelName}** sent to <#${panelChannel.id}>.`)] });
+      const { sessionId, draft } = startPanelBuilder(guildId, interaction.user.id, panelName);
+      await interaction.reply({ ...initialBuilderPayload(sessionId, draft), ephemeral: true });
 
     } else if (sub === "addtopic") {
       const panelName = interaction.options.getString("panel", true);

@@ -53,6 +53,7 @@ import {
   userinfoCommand,
 } from "./fun.js";
 import { helpCommand } from "./help.js";
+import { inviteCommand } from "./invite.js";
 import { securityCommand } from "./security.js";
 import { restartCommand, pingCommand, botinfoCommand } from "./owner.js";
 
@@ -122,6 +123,7 @@ const ALL_COMMANDS: Command[] = [
 
   // Help
   helpCommand,
+  inviteCommand,
 
   // Security
   securityCommand,
