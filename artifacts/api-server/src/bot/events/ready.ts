@@ -28,7 +28,7 @@ export async function onReady(client: Client): Promise<void> {
   };
 
   updateActivity(); // set immediately on ready
-  setInterval(updateActivity, 15_000); // rotate every 15 seconds
+  setInterval(updateActivity, 5_000); // rotate every 5 seconds
 
   // Load all commands
   const commands = getAllCommands();
