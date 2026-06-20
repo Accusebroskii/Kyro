@@ -20,6 +20,7 @@ import {
   handlePanelSend,
   handlePanelCancel,
 } from "../lib/panelBuilder.js";
+import { handleBackupRestoreConfirm, handleBackupRestoreCancel } from "../commands/backup.js";
 
 export async function onInteractionCreate(interaction: Interaction): Promise<void> {
   // Handle slash commands
@@ -84,6 +85,15 @@ export async function onInteractionCreate(interaction: Interaction): Promise<voi
     }
     if (btn.customId.startsWith("panel_cancel:")) {
       await handlePanelCancel(btn);
+      return;
+    }
+
+    if (btn.customId.startsWith("backup_restore_confirm:")) {
+      await handleBackupRestoreConfirm(btn);
+      return;
+    }
+    if (btn.customId === "backup_restore_cancel") {
+      await handleBackupRestoreCancel(btn);
       return;
     }
 

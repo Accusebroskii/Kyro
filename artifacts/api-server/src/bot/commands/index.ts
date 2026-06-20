@@ -54,6 +54,7 @@ import {
 } from "./fun.js";
 import { helpCommand } from "./help.js";
 import { inviteCommand } from "./invite.js";
+import { backupCommand } from "./backup.js"; 
 import { afkCommand } from "./afk.js";
 import { securityCommand } from "./security.js";
 import { restartCommand, pingCommand, botinfoCommand } from "./owner.js";
@@ -64,6 +65,7 @@ export interface Command {
 }
 
 const ALL_COMMANDS: Command[] = [
+  backupCommand,
   // Moderation
   banCommand,
   kickCommand,
