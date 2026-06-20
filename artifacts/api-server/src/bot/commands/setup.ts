@@ -30,7 +30,13 @@ export const setupCommand = {
         .addChannelOption((o) => o.setName("category").setDescription("Category for ticket channels").addChannelTypes(ChannelType.GuildCategory))
         .addChannelOption((o) => o.setName("logchannel").setDescription("Ticket log channel").addChannelTypes(ChannelType.GuildText)),
     )
-    .addSubcommand((s) => s.setName("panel").setDescription("Open the interactive ticket panel builder"))
+    .addSubcommand((s) =>
+      s.setName("panel").setDescription("Open the interactive ticket panel builder"),
+    )
+    .addSubcommand((s) =>
+      s.setName("modmail").setDescription("Set the ModMail forum channel")
+        .addChannelOption((o) => o.setName("forum").setDescription("Forum channel for ModMail threads").setRequired(true).addChannelTypes(ChannelType.GuildForum)),
+    )
     .addSubcommand((s) =>
       s.setName("addtopic").setDescription("Add a topic to a ticket panel")
         .addStringOption((o) => o.setName("panel").setDescription("Panel name to add topic to").setRequired(true))
@@ -111,9 +117,14 @@ export const setupCommand = {
       }).where(eq(guildConfigTable.guildId, guildId));
       await interaction.reply({ embeds: [successEmbed("Tickets Configured", "Ticket system updated.")] });
 
-      } else if (sub === "panel") {
-        const { sessionId, draft } = startPanelBuilder(guildId, interaction.user.id);
-        await interaction.reply({ ...initialBuilderPayload(sessionId, draft), ephemeral: true });
+    } else if (sub === "panel") {
+      const { sessionId, draft } = startPanelBuilder(guildId, interaction.user.id);
+      await interaction.reply({ ...initialBuilderPayload(sessionId, draft), ephemeral: true });
+
+    } else if (sub === "modmail") {
+      const forum = interaction.options.getChannel("forum", true);
+      await db.update(guildConfigTable).set({ modmailForumId: forum.id }).where(eq(guildConfigTable.guildId, guildId));
+      await interaction.reply({ embeds: [successEmbed("ModMail Configured", `ModMail forum set to <#${forum.id}>.`)] });
 
     } else if (sub === "addtopic") {
       const panelName = interaction.options.getString("panel", true);
