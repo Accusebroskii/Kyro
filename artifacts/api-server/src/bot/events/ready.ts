@@ -13,7 +13,7 @@ export async function onReady(client: Client): Promise<void> {
   // Rotating bot activity
   const statuses: { text: string; type: ActivityType }[] = [
     { text: "Kyro /help", type: ActivityType.Watching },
-    { text: "Owner accusebroski_", type: ActivityType.Watching },
+    { text: "Owner: accusebroski_", type: ActivityType.Watching },
     { text: `${client.guilds.cache.size} servers`, type: ActivityType.Watching },
   ];
   let statusIndex = 0;
