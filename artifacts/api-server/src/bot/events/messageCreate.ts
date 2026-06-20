@@ -1,10 +1,9 @@
 import { Message, TextChannel, GuildMember } from "discord.js";
-import { db, guildConfigTable, modmailTable } from "@workspace/db";
+import { db, guildConfigTable, modmailTable, afkStatusTable } from "@workspace/db";
 import { eq, and } from "drizzle-orm";
 import { logger } from "../../lib/logger.js";
 
 const spamTracker = new Map<string, { count: number; lastMessage: number; warned: boolean }>();
-
 const KALEIGH_USER_ID = "1492136743493828790";
 
 export async function onMessageCreate(message: Message): Promise<void> {
@@ -14,6 +13,40 @@ export async function onMessageCreate(message: Message): Promise<void> {
   // Sniper Duels ping
   if (message.content.toLowerCase().includes("sniper duels")) {
     message.channel.send(`<@${KALEIGH_USER_ID}>`).catch(() => {});
+  }
+
+  // AFK: clear AFK status if the author was AFK, and notify if a mentioned user is AFK
+  try {
+    const [selfAfk] = await db
+      .select()
+      .from(afkStatusTable)
+      .where(and(eq(afkStatusTable.guildId, guildId), eq(afkStatusTable.userId, message.author.id)))
+      .limit(1);
+    if (selfAfk) {
+      await db.delete(afkStatusTable).where(eq(afkStatusTable.id, selfAfk.id));
+      (message.channel as TextChannel)
+        .send(`👋 Welcome back <@${message.author.id}>, I removed your AFK status.`)
+        .then((m) => setTimeout(() => m.delete().catch(() => {}), 5000))
+        .catch(() => {});
+    }
+
+    if (message.mentions.users.size > 0) {
+      for (const [, mentioned] of message.mentions.users) {
+        if (mentioned.bot) continue;
+        const [mentionedAfk] = await db
+          .select()
+          .from(afkStatusTable)
+          .where(and(eq(afkStatusTable.guildId, guildId), eq(afkStatusTable.userId, mentioned.id)))
+          .limit(1);
+        if (mentionedAfk) {
+          (message.channel as TextChannel)
+            .send(`💤 <@${mentioned.id}> is AFK: ${mentionedAfk.reason}`)
+            .catch(() => {});
+        }
+      }
+    }
+  } catch (err) {
+    logger.error({ err }, "Error in AFK messageCreate handler");
   }
 
   // ModMail: if a staff member types in a modmail thread, forward it to the user
@@ -54,9 +87,7 @@ export async function onMessageCreate(message: Message): Promise<void> {
       .from(guildConfigTable)
       .where(eq(guildConfigTable.guildId, guildId))
       .limit(1);
-
     if (!config?.antispamEnabled) return;
-
     // Skip mods, admins, and anyone with Administrator permission
     let member = message.guild.members.cache.get(message.author.id);
     if (!member) {
@@ -69,11 +100,9 @@ export async function onMessageCreate(message: Message): Promise<void> {
     if (config.modRoleId && member?.roles.cache.has(config.modRoleId)) return;
     if (config.adminRoleId && member?.roles.cache.has(config.adminRoleId)) return;
     if (member?.permissions.has("Administrator")) return;
-
     const key = `${guildId}:${message.author.id}`;
     const now = Date.now();
     const tracker = spamTracker.get(key) ?? { count: 0, lastMessage: now, warned: false };
-
     if (now - tracker.lastMessage < 3000) {
       tracker.count++;
     } else {
@@ -82,7 +111,6 @@ export async function onMessageCreate(message: Message): Promise<void> {
     }
     tracker.lastMessage = now;
     spamTracker.set(key, tracker);
-
     if (tracker.count >= 5) {
       try {
         await message.delete();

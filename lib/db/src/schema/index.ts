@@ -6,3 +6,4 @@ export * from "./modmail";
 export * from "./reports";
 export * from "./autoRoles";
 export * from "./musicPlaylists";
+export * from "./afkStatus";

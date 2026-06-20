@@ -54,6 +54,7 @@ import {
 } from "./fun.js";
 import { helpCommand } from "./help.js";
 import { inviteCommand } from "./invite.js";
+import { afkCommand } from "./afk.js";
 import { securityCommand } from "./security.js";
 import { restartCommand, pingCommand, botinfoCommand } from "./owner.js";
 
@@ -120,6 +121,7 @@ const ALL_COMMANDS: Command[] = [
   pollCommand,
   serverinfoCommand,
   userinfoCommand,
+  afkCommand,
 
   // Help
   helpCommand,
