@@ -25,24 +25,33 @@ interface ParsedCategory {
 }
 
 function parseLayout(raw: string): ParsedCategory[] {
-  const matches = [...raw.matchAll(/(\p{Emoji}\uFE0F?)\s*⟡\s*([a-zA-Z0-9-]+)/gu)];
+  // Insert a newline before every emoji — handles pastes that lose their line breaks
+  const normalized = raw.replace(/(\p{Emoji}\uFE0F?)/gu, "\n$1");
+  const lines = normalized.split(/\r?\n/).map((l) => l.trim()).filter(Boolean);
+
   const categories: ParsedCategory[] = [];
   let current: ParsedCategory | null = null;
 
-  for (const m of matches) {
-    const emoji = m[1];
-    const word = m[2];
-    const isCategory = word === word.toUpperCase() && /[A-Z]/.test(word);
+  for (const line of lines) {
+    // Optional emoji, then any/no separator symbol, then the actual text
+    const match = line.match(/^(\p{Emoji}\uFE0F?)?\s*[|｜\-–:⟡✦◆●→»]*\s*(.+)$/u);
+    if (!match) continue;
+    const emoji = match[1] ?? "";
+    const text = match[2]?.trim();
+    if (!text) continue;
+
+    const isCategory = text === text.toUpperCase() && /[A-Za-z]/.test(text);
 
     if (isCategory) {
-      current = { name: `${emoji} ⟡ ${word}`, channels: [] };
+      current = { name: emoji ? `${emoji} ${text}` : text, channels: [] };
       categories.push(current);
     } else {
       if (!current) {
         current = { name: "General", channels: [] };
         categories.push(current);
       }
-      current.channels.push({ name: `${emoji}｜${word}` });
+      const channelName = text.toLowerCase().replace(/\s+/g, "-");
+      current.channels.push({ name: emoji ? `${emoji}｜${channelName}` : channelName });
     }
   }
 
@@ -67,12 +76,12 @@ export const templateCommand = {
       .addComponents(
         new ActionRowBuilder<TextInputBuilder>().addComponents(
           new TextInputBuilder()
-            .setCustomId("layout")
-            .setLabel("Categories & Channels")
-            .setStyle(TextInputStyle.Paragraph)
-            .setRequired(true)
-            .setMaxLength(4000)
-            .setPlaceholder("🚀 ⟡ HQ\n📢｜announcements\n🆕｜updates\n..."),
+          .setCustomId("layout")
+          .setLabel("CAPS = category, lowercase = channel")
+          .setStyle(TextInputStyle.Paragraph)
+          .setRequired(true)
+          .setMaxLength(4000)
+          .setPlaceholder("🚀 HQ\n📢 announcements\n🆕 updates\nAny separator (or none) is fine, e.g. ⟡, |, -, :"),
         ),
       );
 
