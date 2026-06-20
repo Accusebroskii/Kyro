@@ -14,6 +14,8 @@ import { onGuildMemberAdd } from "./events/guildMemberAdd.js";
 import { onInteractionCreate } from "./events/interactionCreate.js";
 import { onMessageCreate } from "./events/messageCreate.js";
 import { onVoiceStateUpdate } from "./events/voiceStateUpdate.js";
+import { onMessageReactionAdd } from "./events/messageReactionAdd.js";
+import { onMessageReactionRemove } from "./events/messageReactionRemove.js";
 import { logger } from "../lib/logger.js";
 import { ensureYtDlp } from "./lib/music.js";
 
@@ -30,8 +32,9 @@ export function createBotClient(): Client {
       GatewayIntentBits.GuildVoiceStates,
       GatewayIntentBits.DirectMessages,
       GatewayIntentBits.GuildModeration,
+      GatewayIntentBits.GuildMessageReactions,
     ],
-    partials: [Partials.Channel, Partials.Message, Partials.User],
+    partials: [Partials.Channel, Partials.Message, Partials.User, Partials.Reaction],
   });
 
   client.once(Events.ClientReady, () => onReady(client));
@@ -40,6 +43,8 @@ export function createBotClient(): Client {
   client.on(Events.InteractionCreate, onInteractionCreate);
   client.on(Events.MessageCreate, onMessageCreate);
   client.on(Events.VoiceStateUpdate, onVoiceStateUpdate);
+  client.on(Events.MessageReactionAdd, onMessageReactionAdd);
+  client.on(Events.MessageReactionRemove, onMessageReactionRemove);
 
   // ModMail: handle DMs to the bot
   client.on(Events.MessageCreate, async (message) => {

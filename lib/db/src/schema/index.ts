@@ -8,3 +8,4 @@ export * from "./autoRoles";
 export * from "./musicPlaylists";
 export * from "./afkStatus";
 export * from "./serverBackups";
+export * from "./reactionRoles";

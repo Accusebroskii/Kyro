@@ -55,6 +55,7 @@ import {
 import { helpCommand } from "./help.js";
 import { inviteCommand } from "./invite.js";
 import { backupCommand } from "./backup.js"; 
+import { reactionRoleCommand } from "./reactionrole.js";
 import { afkCommand } from "./afk.js";
 import { securityCommand } from "./security.js";
 import { restartCommand, pingCommand, botinfoCommand } from "./owner.js";
@@ -65,6 +66,7 @@ export interface Command {
 }
 
 const ALL_COMMANDS: Command[] = [
+  reactionRoleCommand,
   backupCommand,
   // Moderation
   banCommand,
