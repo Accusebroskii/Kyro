@@ -30,10 +30,7 @@ export const setupCommand = {
         .addChannelOption((o) => o.setName("category").setDescription("Category for ticket channels").addChannelTypes(ChannelType.GuildCategory))
         .addChannelOption((o) => o.setName("logchannel").setDescription("Ticket log channel").addChannelTypes(ChannelType.GuildText)),
     )
-    .addSubcommand((s) =>
-      s.setName("panel").setDescription("Open the interactive ticket panel builder")
-        .addStringOption((o) => o.setName("name").setDescription("Internal panel name e.g. support").setRequired(true)),
-    )
+    .addSubcommand((s) => s.setName("panel").setDescription("Open the interactive ticket panel builder"))
     .addSubcommand((s) =>
       s.setName("addtopic").setDescription("Add a topic to a ticket panel")
         .addStringOption((o) => o.setName("panel").setDescription("Panel name to add topic to").setRequired(true))
@@ -114,10 +111,9 @@ export const setupCommand = {
       }).where(eq(guildConfigTable.guildId, guildId));
       await interaction.reply({ embeds: [successEmbed("Tickets Configured", "Ticket system updated.")] });
 
-    } else if (sub === "panel") {
-      const panelName = interaction.options.getString("name", true);
-      const { sessionId, draft } = startPanelBuilder(guildId, interaction.user.id, panelName);
-      await interaction.reply({ ...initialBuilderPayload(sessionId, draft), ephemeral: true });
+      } else if (sub === "panel") {
+        const { sessionId, draft } = startPanelBuilder(guildId, interaction.user.id);
+        await interaction.reply({ ...initialBuilderPayload(sessionId, draft), ephemeral: true });
 
     } else if (sub === "addtopic") {
       const panelName = interaction.options.getString("panel", true);

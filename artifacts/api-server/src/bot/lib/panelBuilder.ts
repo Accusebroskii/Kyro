@@ -33,23 +33,25 @@ interface PanelDraft {
   title: string;
   description: string;
   channelId?: string;
+  bannerUrl?: string;
+  color?: string;
   topics: (TopicSlot | null)[];
 }
 
-// In-memory store of in-progress builders, keyed by a short session id
 const drafts = new Map<string, PanelDraft>();
 
 function genSessionId(): string {
   return Math.random().toString(36).slice(2, 10);
 }
 
-export function startPanelBuilder(guildId: string, userId: string, panelName: string) {
+export function startPanelBuilder(guildId: string, userId: string) {
   const sessionId = genSessionId();
+  const panelName = `panel-${sessionId}`;
   const draft: PanelDraft = {
     guildId,
     userId,
     panelName,
-    title: panelName,
+    title: "Untitled Panel",
     description: "To create a ticket use the menu below",
     channelId: undefined,
     topics: Array(MAX_SLOTS).fill(null),
@@ -61,11 +63,11 @@ export function startPanelBuilder(guildId: string, userId: string, panelName: st
 function renderBuilder(sessionId: string, draft: PanelDraft) {
   const embed = new EmbedBuilder()
     .setTitle(`🛠️ Panel Builder — ${draft.panelName}`)
-    .setColor(0x5865f2)
+    .setColor((draft.color as any) ?? 0x5865f2)
     .setDescription(
       `**Title:** ${draft.title}\n**Description:** ${draft.description}\n**Channel:** ${
         draft.channelId ? `<#${draft.channelId}>` : "Not set"
-      }`,
+      }\n**Banner:** ${draft.bannerUrl ? "✅ Set" : "Not set"}\n**Color:** ${draft.color ?? "Default"}`,
     )
     .addFields(
       draft.topics.map((t, i) => ({
@@ -188,6 +190,23 @@ export async function handlePanelInfoButton(interaction: ButtonInteraction) {
           .setMaxLength(1000)
           .setValue(draft.description),
       ),
+      new ActionRowBuilder<TextInputBuilder>().addComponents(
+        new TextInputBuilder()
+          .setCustomId("bannerUrl")
+          .setLabel("Banner image URL (optional)")
+          .setStyle(TextInputStyle.Short)
+          .setRequired(false)
+          .setValue(draft.bannerUrl ?? ""),
+      ),
+      new ActionRowBuilder<TextInputBuilder>().addComponents(
+        new TextInputBuilder()
+          .setCustomId("color")
+          .setLabel("Embed color hex e.g. #5865F2 (optional)")
+          .setStyle(TextInputStyle.Short)
+          .setRequired(false)
+          .setMaxLength(7)
+          .setValue(draft.color ?? ""),
+      ),
     );
 
   await interaction.showModal(modal);
@@ -233,6 +252,13 @@ export async function handlePanelModalSubmit(interaction: ModalSubmitInteraction
     }
     draft.title = interaction.fields.getTextInputValue("title").trim();
     draft.description = interaction.fields.getTextInputValue("description").trim() || "To create a ticket use the menu below";
+
+    const bannerInput = interaction.fields.getTextInputValue("bannerUrl").trim();
+    draft.bannerUrl = bannerInput && /^https?:\/\/.+\.(png|jpe?g|gif|webp)$/i.test(bannerInput) ? bannerInput : undefined;
+
+    const colorInput = interaction.fields.getTextInputValue("color").trim();
+    draft.color = /^#?[0-9a-fA-F]{6}$/.test(colorInput) ? (colorInput.startsWith("#") ? colorInput : `#${colorInput}`) : undefined;
+
     await interaction.update(renderBuilder(sessionId, draft));
     return;
   }
@@ -263,12 +289,20 @@ export async function handlePanelSend(interaction: ButtonInteraction) {
     return;
   }
 
-  const embed = new EmbedBuilder().setTitle(draft.title).setColor(0x5865f2).setDescription(draft.description);
+  const embed = new EmbedBuilder()
+    .setTitle(draft.title.match(/\p{Emoji}/u) ? draft.title : `🎫 ${draft.title}`)
+    .setColor((draft.color as any) ?? 0x5865f2)
+    .setDescription(draft.description)
+    .setThumbnail(interaction.guild!.iconURL({ size: 256 }) ?? null)
+    .setFooter({ text: `${interaction.guild!.name} • Support`, iconURL: interaction.guild!.iconURL() ?? undefined })
+    .setTimestamp();
+
+  if (draft.bannerUrl) embed.setImage(draft.bannerUrl);
 
   const row = new ActionRowBuilder<StringSelectMenuBuilder>().addComponents(
     new StringSelectMenuBuilder()
       .setCustomId(`ticket_panel_select:${draft.panelName}`)
-      .setPlaceholder("Select a topic...")
+      .setPlaceholder("🔽 Choose a topic to open a ticket")
       .addOptions(
         filledTopics.map((t) => ({
           label: t.label!,
@@ -281,7 +315,6 @@ export async function handlePanelSend(interaction: ButtonInteraction) {
 
   await channel.send({ embeds: [embed], components: [row] });
 
-  // Persist: clear old topics for this panel name, then insert fresh ones
   await db.delete(ticketTopicsTable).where(and(eq(ticketTopicsTable.guildId, draft.guildId), eq(ticketTopicsTable.panelName, draft.panelName)));
   for (const t of filledTopics) {
     await db.insert(ticketTopicsTable).values({
