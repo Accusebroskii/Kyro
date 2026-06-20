@@ -14,7 +14,7 @@ const commandFiles = readdirSync(commandsPath).filter(f => f.endsWith(".ts") || 
 for (const file of commandFiles) {
   const filePath = path.join(commandsPath, file);
   const mod = await import(pathToFileURL(filePath).href);
-  const command = mod.default ?? Object.values(mod)[0];
+  const command = mod.default ?? Object.values(mod).find((v: any) => v?.data && typeof v.data.toJSON === "function");
   if (command?.data) {
     commands.push(command.data.toJSON());
   }

@@ -58,6 +58,7 @@ import { backupCommand } from "./backup.js";
 import { reactionRoleCommand } from "./reactionrole.js";
 import { afkCommand } from "./afk.js";
 import { securityCommand } from "./security.js";
+import { templateCommand } from "./template.js";
 import { restartCommand, pingCommand, botinfoCommand } from "./owner.js";
 
 export interface Command {
@@ -133,6 +134,7 @@ const ALL_COMMANDS: Command[] = [
 
   // Security
   securityCommand,
+  templateCommand,
 
   // Owner/Misc
   restartCommand,
