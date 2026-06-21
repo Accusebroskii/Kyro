@@ -129,8 +129,9 @@ export const setupCommand = {
       }).where(eq(guildConfigTable.guildId, guildId));
       await interaction.reply({ embeds: [successEmbed("Tickets Configured", "Ticket system updated.")] });
 
-    } else if (sub === "panel") {
-      const { sessionId, draft } = startPanelBuilder(guildId, interaction.user.id);
+      } else if (sub === "panel") {
+        const { sessionId, draft } = await startPanelBuilder(guildId, interaction.user.id);
+      interaction.user.id);
       await interaction.reply({ ...initialBuilderPayload(sessionId, draft), ephemeral: true });
 
     } else if (sub === "modmail") {

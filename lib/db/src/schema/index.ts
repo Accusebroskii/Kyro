@@ -10,3 +10,4 @@ export * from "./afkStatus";
 export * from "./serverBackups";
 export * from "./reactionRoles";
 export * from "./levels";
+export * from "./panelDrafts";
