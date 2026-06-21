@@ -22,6 +22,7 @@ import {
 } from "../lib/panelBuilder.js";
 import { handleBackupRestoreConfirm, handleBackupRestoreCancel } from "../commands/backup.js";
 import { handleTemplateModalSubmit } from "../commands/template.js";
+import { handleCreateRolesModalSubmit } from "../commands/createroles.js";
 
 export async function onInteractionCreate(interaction: Interaction): Promise<void> {
   // Handle slash commands
@@ -68,6 +69,10 @@ export async function onInteractionCreate(interaction: Interaction): Promise<voi
     }
     if (interaction.customId === "template_create_modal") {
       await handleTemplateModalSubmit(interaction);
+      return;
+    }
+    if (interaction.customId === "createroles_modal") {
+      await handleCreateRolesModalSubmit(interaction);
       return;
     }
   }

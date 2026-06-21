@@ -131,7 +131,7 @@ export const setupCommand = {
 
       } else if (sub === "panel") {
         const { sessionId, draft } = await startPanelBuilder(guildId, interaction.user.id);
-      interaction.user.id);
+      interaction.user.id;
       await interaction.reply({ ...initialBuilderPayload(sessionId, draft), ephemeral: true });
 
     } else if (sub === "modmail") {
