@@ -2,6 +2,7 @@ import { Message, TextChannel, GuildMember } from "discord.js";
 import { db, guildConfigTable, modmailTable, afkStatusTable } from "@workspace/db";
 import { eq, and } from "drizzle-orm";
 import { logger } from "../../lib/logger.js";
+import { handleMessageXp } from "../commands/levels.js";
 
 const spamTracker = new Map<string, { count: number; lastMessage: number; warned: boolean }>();
 const KALEIGH_USER_ID = "1492136743493828790";
@@ -49,6 +50,15 @@ export async function onMessageCreate(message: Message): Promise<void> {
     logger.error({ err }, "Error in AFK messageCreate handler");
   }
 
+  // Leveling: award XP for this message
+  try {
+    if (message.member && message.channel instanceof TextChannel) {
+      await handleMessageXp(message.member, message.channel);
+    }
+  } catch (err) {
+    logger.error({ err }, "Error in leveling messageCreate handler");
+  }
+  
   // ModMail: if a staff member types in a modmail thread, forward it to the user
   try {
     const [thread] = await db

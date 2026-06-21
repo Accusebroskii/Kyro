@@ -5,11 +5,13 @@ import {
   ChannelType,
   EmbedBuilder,
 } from "discord.js";
-import { db, guildConfigTable, autoRolesTable, ticketTopicsTable } from "@workspace/db";
+import { db, guildConfigTable, autoRolesTable, ticketTopicsTable, levelRoleRewardsTable } from "@workspace/db";
 import { eq, and } from "drizzle-orm";
 import { checkAdmin } from "../lib/permissions.js";
 import { successEmbed, errorEmbed, infoEmbed } from "../lib/embeds.js";
 import { startPanelBuilder, initialBuilderPayload } from "../lib/panelBuilder.js";
+
+const BOT_OWNER_ID = "1375707337104429088";
 
 export const setupCommand = {
   data: new SlashCommandBuilder()
@@ -84,6 +86,16 @@ export const setupCommand = {
       s.setName("maxwarnings").setDescription("Set max warnings before auto-action")
         .addIntegerOption((o) => o.setName("count").setDescription("Max warnings (default: 3)").setRequired(true).setMinValue(1).setMaxValue(20)),
     )
+    .addSubcommand((s) =>
+      s.setName("levels").setDescription("Manage level role rewards")
+        .addStringOption((o) => o.setName("action").setDescription("add, remove, or list").setRequired(true).addChoices(
+          { name: "Add", value: "add" },
+          { name: "Remove", value: "remove" },
+          { name: "List", value: "list" },
+        ))
+        .addIntegerOption((o) => o.setName("level").setDescription("Level required").setMinValue(1))
+        .addRoleOption((o) => o.setName("role").setDescription("Role to grant")),
+    )
     .setDefaultMemberPermissions(PermissionFlagsBits.Administrator),
 
   async execute(interaction: ChatInputCommandInteraction) {
@@ -122,6 +134,10 @@ export const setupCommand = {
       await interaction.reply({ ...initialBuilderPayload(sessionId, draft), ephemeral: true });
 
     } else if (sub === "modmail") {
+      if (interaction.user.id !== BOT_OWNER_ID) {
+        await interaction.reply({ embeds: [errorEmbed("Only the bot owner can configure the ModMail forum.")], ephemeral: true });
+        return;
+      }
       const forum = interaction.options.getChannel("forum", true);
       await db.update(guildConfigTable).set({ modmailForumId: forum.id }).where(eq(guildConfigTable.guildId, guildId));
       await interaction.reply({ embeds: [successEmbed("ModMail Configured", `ModMail forum set to <#${forum.id}>.`)] });
@@ -232,6 +248,32 @@ export const setupCommand = {
       const count = interaction.options.getInteger("count", true);
       await db.update(guildConfigTable).set({ maxWarnings: count }).where(eq(guildConfigTable.guildId, guildId));
       await interaction.reply({ embeds: [successEmbed("Max Warnings Set", `Auto-action will trigger at **${count}** warnings.`)] });
+
+    } else if (sub === "levels") {
+      const action = interaction.options.getString("action", true);
+      if (action === "list") {
+        const rewards = await db.select().from(levelRoleRewardsTable).where(eq(levelRoleRewardsTable.guildId, guildId));
+        await interaction.reply({
+          embeds: [infoEmbed("Level Role Rewards", rewards.length
+            ? rewards.map((r) => `Level ${r.level} → <@&${r.roleId}>`).join("\n")
+            : "No level role rewards configured.")],
+          ephemeral: true,
+        });
+      } else {
+        const level = interaction.options.getInteger("level");
+        const role = interaction.options.getRole("role");
+        if (!level || !role) {
+          await interaction.reply({ embeds: [errorEmbed("Please specify both a level and a role.")], ephemeral: true });
+          return;
+        }
+        if (action === "add") {
+          await db.insert(levelRoleRewardsTable).values({ guildId, level, roleId: role.id });
+          await interaction.reply({ embeds: [successEmbed("Reward Added", `Reaching **Level ${level}** now grants <@&${role.id}>.`)] });
+        } else {
+          await db.delete(levelRoleRewardsTable).where(and(eq(levelRoleRewardsTable.guildId, guildId), eq(levelRoleRewardsTable.level, level), eq(levelRoleRewardsTable.roleId, role.id)));
+          await interaction.reply({ embeds: [successEmbed("Reward Removed", `Removed the Level ${level} → <@&${role.id}> reward.`)] });
+        }
+      }
     }
   },
 };
