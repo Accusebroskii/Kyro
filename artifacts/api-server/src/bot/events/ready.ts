@@ -2,6 +2,7 @@ import { Client, ActivityType } from "discord.js";
 import { REST, Routes } from "discord.js";
 import { logger } from "../../lib/logger.js";
 import { getAllCommands } from "../commands/index.js";
+import { scheduleActiveGiveaways } from "../commands/giveaway.js";
 
 export async function onReady(client: Client): Promise<void> {
   if (!client.user) {
@@ -19,7 +20,6 @@ export async function onReady(client: Client): Promise<void> {
   let statusIndex = 0;
 
   const updateActivity = () => {
-    // Recompute server count live each time it's that status's turn
     if (statuses[statusIndex].text.endsWith("servers")) {
       statuses[statusIndex].text = `${client.guilds.cache.size} servers`;
     }
@@ -27,8 +27,11 @@ export async function onReady(client: Client): Promise<void> {
     statusIndex = (statusIndex + 1) % statuses.length;
   };
 
-  updateActivity(); // set immediately on ready
-  setInterval(updateActivity, 5_000); // rotate every 5 seconds
+  updateActivity();
+  setInterval(updateActivity, 5_000);
+
+  // Schedule any active giveaways that survived a restart
+  await scheduleActiveGiveaways(client);
 
   // Load all commands
   const commands = getAllCommands();

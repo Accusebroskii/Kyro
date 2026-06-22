@@ -55,6 +55,7 @@ import {
 import { helpCommand } from "./help.js";
 import { inviteCommand } from "./invite.js";
 import { backupCommand } from "./backup.js"; 
+import { giveawayCommand } from "./giveaway.js";
 import { reactionRoleCommand } from "./reactionrole.js";
 import { afkCommand } from "./afk.js";
 import { createRolesCommand } from "./createroles.js";
@@ -75,6 +76,7 @@ const ALL_COMMANDS: Command[] = [
   leaderboardCommand,
   templateCommand,
   createRolesCommand,
+  giveawayCommand,
   // Moderation
   banCommand,
   kickCommand,

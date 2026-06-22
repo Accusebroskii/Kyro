@@ -11,6 +11,7 @@ import { db, ticketsTable } from "@workspace/db";
 import { eq } from "drizzle-orm";
 import { logger } from "../../lib/logger.js";
 import { successEmbed } from "../lib/embeds.js";
+import { handleGiveawayEnter } from "../commands/giveaway.js";
 import { handleTicketPanelSelect, handleTicketCreate, closeTicketWithTranscript } from "../commands/tickets.js";
 import {
   handlePanelSlotButton,
@@ -80,6 +81,11 @@ export async function onInteractionCreate(interaction: Interaction): Promise<voi
   // Handle button interactions
   if (interaction.isButton()) {
     const btn = interaction as ButtonInteraction;
+
+    if (btn.customId.startsWith("giveaway_enter:")) {
+      await handleGiveawayEnter(btn);
+      return;
+    }
 
     if (btn.customId.startsWith("panel_slot:")) {
       await handlePanelSlotButton(btn);

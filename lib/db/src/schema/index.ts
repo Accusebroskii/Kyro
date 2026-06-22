@@ -11,3 +11,4 @@ export * from "./serverBackups";
 export * from "./reactionRoles";
 export * from "./levels";
 export * from "./panelDrafts";
+export * from "./giveaways";
