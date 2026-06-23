@@ -194,7 +194,11 @@ export async function startBot(): Promise<void> {
     logger.warn({ err }, "Table creation failed, continuing anyway");
   }
 
-  await ensureYtDlp();
+  try {
+    await ensureYtDlp();
+  } catch (err) {
+    logger.error({ err }, "Failed to download/update yt-dlp — music features may be unavailable, continuing bot startup");
+  }
 
   const client = createBotClient();
   botClient = client;
@@ -204,5 +208,6 @@ export async function startBot(): Promise<void> {
     logger.info("Discord bot logged in");
   } catch (err) {
     logger.error({ err }, "Failed to login to Discord");
+    throw err;
   }
 }
