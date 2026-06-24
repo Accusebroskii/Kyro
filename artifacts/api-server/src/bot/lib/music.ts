@@ -181,7 +181,7 @@ function getCookiesArgs(): string[] {
 
 function createYtDlpStream(url: string): Readable {
   const proc = spawn(YTDLP_PATH, [
-    "-f", "bestaudio/best",
+    "-f", "251/250/249/bestaudio",
     "-o", "-",
     "--no-playlist",
     "--quiet",
@@ -346,7 +346,7 @@ export async function joinAndPlay(
         textChannelId,
         voiceChannelId: voiceChannel.id,
         loop: "off",
-        volume: 50,
+        volume: 80,
         guild,
         resource: null,
       };
