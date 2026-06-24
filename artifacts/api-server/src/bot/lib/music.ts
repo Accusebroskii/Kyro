@@ -212,20 +212,14 @@ export async function searchSongs(query: string, limit = 5): Promise<Song[]> {
       ? [
           "--dump-json",
           "--no-playlist",
-          "--quiet",
-          "--no-warnings",
           "--geo-bypass",
-          "--extractor-args", "youtube:player_client=android",
           ...getCookiesArgs(),
           query,
         ]
       : [
           "--dump-json",
           "--no-playlist",
-          "--quiet",
-          "--no-warnings",
           "--geo-bypass",
-          "--extractor-args", "youtube:player_client=android",
           ...getCookiesArgs(),
           `ytsearch${limit}:${query}`,
         ];
