@@ -14,19 +14,37 @@ import { Guild, TextChannel, VoiceBasedChannel } from "discord.js";
 import { spawn } from "child_process";
 import { Readable } from "stream";
 import { existsSync, writeFileSync } from "fs";
-import { chmod, mkdir } from "fs/promises";
 import path from "path";
 import { fileURLToPath } from "url";
 import { musicEmbed } from "./embeds.js";
 import { logger } from "../../lib/logger.js";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
-const BIN_DIR = path.resolve(__dirname, "../../../../bin");
-const YTDLP_PATH = path.join(BIN_DIR, "yt-dlp");
-const COOKIES_PATH = existsSync("/opt/render/project/src/artifacts/api-server/cookies.txt")
-  ? "/opt/render/project/src/artifacts/api-server/cookies.txt"
-  : path.resolve(__dirname, "../../../cookies.txt");
-const YTDLP_URL =
+
+/**
+ * yt-dlp binary resolution.
+ *
+ * We do NOT compute this from __dirname. __dirname's depth depends on how
+ * the project is built (tsc to dist/, tsx running .ts directly, an esbuild
+ * bundle, etc.), and a relative path like "../../../../bin" that's tuned for
+ * one build layout will silently resolve to the wrong place under another
+ * (this previously resolved to "/bin" on Railway and caused spawn ENOENT).
+ *
+ * Instead:
+ *   1. If YTDLP_PATH env var is set, use it explicitly (escape hatch).
+ *   2. Otherwise assume yt-dlp is installed on $PATH (e.g. via Nixpacks/apt
+ *      at build time â€" see nixpacks.toml) and just spawn "yt-dlp".
+ *
+ * This means ensureYtDlp() below is no longer required for normal operation.
+ * It's kept only as an optional fallback for local dev environments that
+ * don't have yt-dlp installed system-wide.
+ */
+const YTDLP_PATH = process.env.YTDLP_PATH || "yt-dlp";
+
+const COOKIES_PATH =
+  process.env.COOKIES_PATH || path.resolve(__dirname, "../../../cookies.txt");
+
+const YTDLP_DOWNLOAD_URL =
   "https://github.com/yt-dlp/yt-dlp/releases/latest/download/yt-dlp_linux";
 
 if (process.env.YT_COOKIES && !existsSync(COOKIES_PATH)) {
@@ -38,18 +56,56 @@ if (process.env.YT_COOKIES && !existsSync(COOKIES_PATH)) {
   }
 }
 
+/**
+ * Verifies yt-dlp is reachable. Logs a clear, actionable error on boot
+ * instead of failing silently/late inside a slash command handler.
+ *
+ * This does NOT download yt-dlp by default anymore — install it via
+ * Nixpacks/apt/Dockerfile so it's on $PATH. Set FORCE_YTDLP_DOWNLOAD=1 if
+ * you explicitly want the legacy runtime-download behavior (e.g. local dev
+ * without system yt-dlp installed).
+ */
 export async function ensureYtDlp(): Promise<void> {
-  await mkdir(BIN_DIR, { recursive: true });
-  logger.info("Downloading/updating yt-dlp...");
-  await new Promise<void>((resolve, reject) => {
-    const proc = spawn("curl", ["-sL", YTDLP_URL, "-o", YTDLP_PATH]);
-    proc.on("close", (code) =>
-      code === 0 ? resolve() : reject(new Error(`curl exited ${code}`)),
-    );
-    proc.on("error", reject);
+  const available = await new Promise<boolean>((resolve) => {
+    const proc = spawn(YTDLP_PATH, ["--version"]);
+    proc.on("error", () => resolve(false));
+    proc.on("close", (code) => resolve(code === 0));
   });
-  await chmod(YTDLP_PATH, 0o755);
-  logger.info("yt-dlp updated successfully");
+
+  if (available) {
+    logger.info({ ytdlpPath: YTDLP_PATH }, "yt-dlp is available");
+    return;
+  }
+
+  if (process.env.FORCE_YTDLP_DOWNLOAD === "1") {
+    logger.warn(
+      "yt-dlp not found on PATH; downloading to a local bin/ directory (FORCE_YTDLP_DOWNLOAD=1)",
+    );
+    const { mkdir, chmod } = await import("fs/promises");
+    const binDir = path.resolve(process.cwd(), "bin");
+    const localPath = path.join(binDir, "yt-dlp");
+    await mkdir(binDir, { recursive: true });
+    await new Promise<void>((resolve, reject) => {
+      const proc = spawn("curl", ["-sL", YTDLP_DOWNLOAD_URL, "-o", localPath]);
+      proc.on("close", (code) =>
+        code === 0 ? resolve() : reject(new Error(`curl exited ${code}`)),
+      );
+      proc.on("error", reject);
+    });
+    await chmod(localPath, 0o755);
+    logger.warn(
+      { localPath },
+      "Downloaded yt-dlp locally. Set YTDLP_PATH to this path, or better: install yt-dlp at build time (Nixpacks/Dockerfile) so this download isn't needed.",
+    );
+    return;
+  }
+
+  logger.error(
+    { ytdlpPath: YTDLP_PATH },
+    "yt-dlp was not found and could not be executed. Install it at build time " +
+      "(see nixpacks.toml), or set YTDLP_PATH to an explicit binary path, or " +
+      "set FORCE_YTDLP_DOWNLOAD=1 for a temporary runtime download.",
+  );
 }
 
 // Spotify token cache
@@ -72,7 +128,10 @@ async function getSpotifyToken(): Promise<string | null> {
       },
       body: "grant_type=client_credentials",
     });
-    const data = await res.json() as { access_token: string; expires_in: number };
+    const data = (await res.json()) as {
+      access_token: string;
+      expires_in: number;
+    };
     spotifyToken = data.access_token;
     spotifyTokenExpiry = Date.now() + (data.expires_in - 60) * 1000;
     return spotifyToken;
@@ -89,10 +148,11 @@ async function resolveSpotifyUrl(url: string): Promise<Song[]> {
   try {
     const trackMatch = url.match(/spotify\.com\/track\/([a-zA-Z0-9]+)/);
     if (trackMatch) {
-      const res = await fetch(`https://api.spotify.com/v1/tracks/${trackMatch[1]}`, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
-      const track = await res.json() as any;
+      const res = await fetch(
+        `https://api.spotify.com/v1/tracks/${trackMatch[1]}`,
+        { headers: { Authorization: `Bearer ${token}` } },
+      );
+      const track = (await res.json()) as any;
       const query = `${track.name} ${track.artists[0]?.name}`;
       return await searchSongs(query, 1);
     }
@@ -100,12 +160,13 @@ async function resolveSpotifyUrl(url: string): Promise<Song[]> {
     const playlistMatch = url.match(/spotify\.com\/playlist\/([a-zA-Z0-9]+)/);
     if (playlistMatch) {
       const songs: Song[] = [];
-      let next: string | null = `https://api.spotify.com/v1/playlists/${playlistMatch[1]}/tracks?limit=50`;
+      let next: string | null =
+        `https://api.spotify.com/v1/playlists/${playlistMatch[1]}/tracks?limit=50`;
       while (next && songs.length < 100) {
         const res = await fetch(next, {
           headers: { Authorization: `Bearer ${token}` },
         });
-        const data = await res.json() as any;
+        const data = (await res.json()) as any;
         next = data.next;
         for (const item of data.items) {
           if (!item.track) continue;
@@ -119,10 +180,11 @@ async function resolveSpotifyUrl(url: string): Promise<Song[]> {
 
     const albumMatch = url.match(/spotify\.com\/album\/([a-zA-Z0-9]+)/);
     if (albumMatch) {
-      const res = await fetch(`https://api.spotify.com/v1/albums/${albumMatch[1]}/tracks?limit=50`, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
-      const data = await res.json() as any;
+      const res = await fetch(
+        `https://api.spotify.com/v1/albums/${albumMatch[1]}/tracks?limit=50`,
+        { headers: { Authorization: `Bearer ${token}` } },
+      );
+      const data = (await res.json()) as any;
       const songs: Song[] = [];
       for (const track of data.items.slice(0, 50)) {
         const query = `${track.name} ${track.artists[0]?.name}`;
@@ -167,7 +229,7 @@ function formatDuration(seconds: number): string {
   if (!seconds || isNaN(seconds)) return "0:00";
   const h = Math.floor(seconds / 3600);
   const m = Math.floor((seconds % 3600) / 60);
-  const s = seconds % 60;
+  const s = Math.floor(seconds % 60);
   if (h > 0)
     return `${h}:${String(m).padStart(2, "0")}:${String(s).padStart(2, "0")}`;
   return `${m}:${String(s).padStart(2, "0")}`;
@@ -175,28 +237,48 @@ function formatDuration(seconds: number): string {
 
 function getCookiesArgs(): string[] {
   const exists = existsSync(COOKIES_PATH);
-  console.log("Cookies path:", COOKIES_PATH, "exists:", exists);
+  logger.info({ cookiesPath: COOKIES_PATH, exists }, "Resolved cookies file");
   return exists ? ["--cookies", COOKIES_PATH] : [];
 }
 
+/**
+ * Spawns yt-dlp and rejects/logs clearly on ENOENT instead of letting the
+ * caller silently end up with empty output.
+ */
+function spawnYtDlp(args: string[]) {
+  const proc = spawn(YTDLP_PATH, args);
+  proc.on("error", (err: NodeJS.ErrnoException) => {
+    if (err.code === "ENOENT") {
+      logger.error(
+        { ytdlpPath: YTDLP_PATH },
+        "yt-dlp binary not found. Install it at build time (nixpacks.toml) " +
+          "or set YTDLP_PATH to a valid binary path.",
+      );
+    } else {
+      logger.error({ err }, "yt-dlp spawn error");
+    }
+  });
+  return proc;
+}
+
 function createYtDlpStream(url: string): Readable {
-  const proc = spawn(YTDLP_PATH, [
-    "-f", "251/250/249/bestaudio",
-    "-o", "-",
+  const proc = spawnYtDlp([
+    "-f",
+    "bestaudio/best",
+    "-o",
+    "-",
     "--no-playlist",
-    "--quiet",
     "--no-warnings",
     "--geo-bypass",
-    "--extractor-args", "youtube:player_client=android",
+    "--extractor-args",
+    "youtube:player_client=android",
     ...getCookiesArgs(),
     url,
   ]);
 
   proc.stderr.on("data", (chunk: Buffer) => {
-    console.log(chunk.toString());
+    logger.warn({ ytdlp: chunk.toString().trim() }, "yt-dlp stderr (stream)");
   });
-
-  proc.on("error", (err) => logger.error({ err }, "yt-dlp spawn error"));
 
   return proc.stdout as Readable;
 }
@@ -208,28 +290,39 @@ export async function searchSongs(query: string, limit = 5): Promise<Song[]> {
     }
 
     const isUrl = query.startsWith("http");
-    const args = isUrl
-      ? [
-          "--dump-json",
-          "--no-playlist",
-          "--geo-bypass",
-          ...getCookiesArgs(),
-          query,
-        ]
-      : [
-          "--dump-json",
-          "--no-playlist",
-          "--geo-bypass",
-          ...getCookiesArgs(),
-          `ytsearch${limit}:${query}`,
-        ];
+
+    // NOTE: player_client=android is intentionally NOT used for search.
+    // YouTube search extraction under the android client frequently returns
+    // zero parseable results in yt-dlp (this was the root cause of every
+    // search returning "Songs found: []" regardless of query). The android
+    // client is still useful for the actual audio stream/download below,
+    // where it helps avoid throttling on the watch page â€" so it stays there.
+    const args = [
+      "--dump-json",
+      "--no-playlist",
+      "--no-warnings",
+      "--geo-bypass",
+      ...getCookiesArgs(),
+      isUrl ? query : `ytsearch${limit}:${query}`,
+    ];
 
     const result = await new Promise<string>((resolve, reject) => {
-      const proc = spawn(YTDLP_PATH, args);
+      const proc = spawnYtDlp(args);
       let output = "";
+      let stderrOutput = "";
       proc.stdout.on("data", (chunk: Buffer) => (output += chunk.toString()));
-      proc.stderr.on("data", (chunk: Buffer) => console.log(chunk.toString()));
-      proc.on("close", () => resolve(output));
+      proc.stderr.on("data", (chunk: Buffer) => {
+        stderrOutput += chunk.toString();
+      });
+      proc.on("close", (code) => {
+        if (stderrOutput.trim()) {
+          logger.warn(
+            { ytdlp: stderrOutput.trim(), exitCode: code },
+            "yt-dlp stderr (search)",
+          );
+        }
+        resolve(output);
+      });
       proc.on("error", reject);
     });
 
@@ -250,9 +343,15 @@ export async function searchSongs(query: string, limit = 5): Promise<Song[]> {
         // skip bad lines
       }
     }
+
+    logger.info(
+      { query, resultCount: songs.length },
+      "Search complete",
+    );
+
     return songs;
   } catch (err) {
-    logger.error({ err }, "Error searching songs");
+    logger.error({ err, query }, "Error searching songs");
     return [];
   }
 }
@@ -346,7 +445,7 @@ export async function joinAndPlay(
         textChannelId,
         voiceChannelId: voiceChannel.id,
         loop: "off",
-        volume: 80,
+        volume: 50,
         guild,
         resource: null,
       };
