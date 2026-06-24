@@ -306,6 +306,15 @@ export async function searchSongs(query: string, limit = 5): Promise<Song[]> {
       isUrl ? query : `ytsearch${limit}:${query}`,
     ];
 
+    // TEMPORARY DEBUG — remove once the empty-results bug is found.
+    // Logs the exact binary path and args array used by the REAL search
+    // call, so it can be compared against what worked when tested manually
+    // in the shell.
+    logger.info(
+      { ytdlpPath: YTDLP_PATH, args, limit, query },
+      "DEBUG: about to spawn yt-dlp for search",
+    );
+
     const result = await new Promise<string>((resolve, reject) => {
       const proc = spawnYtDlp(args);
       let output = "";
@@ -321,6 +330,11 @@ export async function searchSongs(query: string, limit = 5): Promise<Song[]> {
             "yt-dlp stderr (search)",
           );
         }
+        // TEMPORARY DEBUG — remove once the empty-results bug is found.
+        logger.info(
+          { exitCode: code, stdoutLength: output.length },
+          "DEBUG: yt-dlp search process closed",
+        );
         resolve(output);
       });
       proc.on("error", reject);
