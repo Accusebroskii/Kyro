@@ -34,6 +34,7 @@ import {
   musicEmbed,
   infoEmbed,
 } from "../lib/embeds.js";
+import { logger } from "../../lib/logger.js";
 
 function requireVoiceChannel(
   interaction: ChatInputCommandInteraction,
@@ -53,6 +54,13 @@ export const playCommand = {
         .setRequired(true),
     ),
   async execute(interaction: ChatInputCommandInteraction) {
+    // TEMPORARY DEBUG — remove once the "Unknown interaction" / 10062 bug is found.
+    // Compares Discord's own interaction creation time to when this handler
+    // actually starts running, to see how much of the 3-second ack window
+    // was already consumed before we even got here.
+    const delayMs = Date.now() - interaction.createdTimestamp;
+    logger.info({ delayMs }, "DEBUG: play command entered");
+
     const vc = requireVoiceChannel(interaction);
     if (!vc) {
       await interaction.reply({
@@ -61,7 +69,17 @@ export const playCommand = {
       });
       return;
     }
+
+    // TEMPORARY DEBUG — log right before the deferReply call that's failing.
+    const beforeDeferMs = Date.now() - interaction.createdTimestamp;
+    logger.info({ beforeDeferMs }, "DEBUG: about to call deferReply");
+
     await interaction.deferReply();
+
+    // TEMPORARY DEBUG — log right after a successful deferReply.
+    const afterDeferMs = Date.now() - interaction.createdTimestamp;
+    logger.info({ afterDeferMs }, "DEBUG: deferReply succeeded");
+
     const query = interaction.options.getString("query", true);
     const songs = await searchSongs(query, 1);
 
