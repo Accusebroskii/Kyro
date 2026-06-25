@@ -2,8 +2,8 @@ import {
   SlashCommandBuilder,
   ChatInputCommandInteraction,
   MessageFlags,
-  ActivityType,
 } from "discord.js";
+import { setBugMode, isBugModeActive } from "../events/ready.js";
 
 const OWNER_ID = "1375707337104429088";
 
@@ -76,11 +76,6 @@ export const botinfoCommand = {
   },
 };
 
-// Tracks whether "bug mode" is currently active, so /bug can toggle it.
-// In-memory only — resets to false on restart, which is fine since restart
-// already restores the normal presence on boot.
-let bugModeActive = false;
-
 export const bugCommand = {
   data: new SlashCommandBuilder()
     .setName("bug")
@@ -94,30 +89,14 @@ export const bugCommand = {
       return;
     }
 
-    const client = interaction.client;
-    bugModeActive = !bugModeActive;
+    const newState = !isBugModeActive();
+    setBugMode(newState);
 
-    if (bugModeActive) {
-      client.user?.setPresence({
-        activities: [{ name: "fixing bugs", type: ActivityType.Watching }],
-        status: "dnd",
-      });
-      await interaction.reply({
-        content: "🐛 Bug mode **enabled** — status set to \"Watching fixing bugs\".",
-        flags: MessageFlags.Ephemeral,
-      });
-    } else {
-      const serverCount = client.guilds.cache.size;
-      client.user?.setPresence({
-        activities: [
-          { name: `${serverCount} servers`, type: ActivityType.Watching },
-        ],
-        status: "online",
-      });
-      await interaction.reply({
-        content: "✅ Bug mode **disabled** — status restored to normal.",
-        flags: MessageFlags.Ephemeral,
-      });
-    }
+    await interaction.reply({
+      content: newState
+        ? "🐛 Bug mode **enabled** — status set to \"Watching fixing bugs\"."
+        : "✅ Bug mode **disabled** — status restored to normal.",
+      flags: MessageFlags.Ephemeral,
+    });
   },
 };
