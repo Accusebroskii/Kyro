@@ -12,6 +12,7 @@ let bugModeActive = false;
 let botClient: Client | null = null;
 
 export function setBugMode(active: boolean): void {
+  console.log("DEBUG: setBugMode called with", active);
   bugModeActive = active;
 
   if (!botClient?.user) return;
@@ -57,6 +58,7 @@ export async function onReady(client: Client): Promise<void> {
   ];
   let statusIndex = 0;
   const updateActivity = () => {
+    console.log("DEBUG: tick, bugModeActive =", bugModeActive);
     // Skip rotating while bug mode is active so the "Fixing bugs" status
     // set by /bug isn't immediately overwritten.
     if (bugModeActive) return;
