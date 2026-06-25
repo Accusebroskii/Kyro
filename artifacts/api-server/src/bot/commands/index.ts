@@ -62,7 +62,7 @@ import { createRolesCommand } from "./createroles.js";
 import { rankCommand, leaderboardCommand } from "./levels.js";
 import { securityCommand } from "./security.js";
 import { templateCommand } from "./template.js";
-import { restartCommand, pingCommand, botinfoCommand } from "./owner.js";
+import { restartCommand, pingCommand, botinfoCommand, bugCommand } from "./owner.js";
 
 export interface Command {
   data: { name: string; toJSON(): object };
@@ -144,10 +144,11 @@ const ALL_COMMANDS: Command[] = [
   securityCommand,
 
   // Owner/Misc
-  restartCommand,
-  pingCommand,
-  botinfoCommand,
-];
+    restartCommand,
+    pingCommand,
+    botinfoCommand,
+    bugCommand,
+  ];
 
 const commandMap = new Map<string, Command>(
   ALL_COMMANDS.map((c) => [c.data.name, c]),

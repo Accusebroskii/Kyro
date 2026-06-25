@@ -1,4 +1,9 @@
-import { SlashCommandBuilder, ChatInputCommandInteraction, MessageFlags } from "discord.js";
+import {
+  SlashCommandBuilder,
+  ChatInputCommandInteraction,
+  MessageFlags,
+  ActivityType,
+} from "discord.js";
 
 const OWNER_ID = "1375707337104429088";
 
@@ -68,5 +73,51 @@ export const botinfoCommand = {
         },
       ],
     });
+  },
+};
+
+// Tracks whether "bug mode" is currently active, so /bug can toggle it.
+// In-memory only — resets to false on restart, which is fine since restart
+// already restores the normal presence on boot.
+let bugModeActive = false;
+
+export const bugCommand = {
+  data: new SlashCommandBuilder()
+    .setName("bug")
+    .setDescription("Toggle bot status to show it's fixing bugs (owner only)"),
+  async execute(interaction: ChatInputCommandInteraction) {
+    if (interaction.user.id !== OWNER_ID) {
+      await interaction.reply({
+        content: "Only the bot owner can use this command.",
+        flags: MessageFlags.Ephemeral,
+      });
+      return;
+    }
+
+    const client = interaction.client;
+    bugModeActive = !bugModeActive;
+
+    if (bugModeActive) {
+      client.user?.setPresence({
+        activities: [{ name: "fixing bugs", type: ActivityType.Watching }],
+        status: "dnd",
+      });
+      await interaction.reply({
+        content: "🐛 Bug mode **enabled** — status set to \"Watching fixing bugs\".",
+        flags: MessageFlags.Ephemeral,
+      });
+    } else {
+      const serverCount = client.guilds.cache.size;
+      client.user?.setPresence({
+        activities: [
+          { name: `${serverCount} servers`, type: ActivityType.Watching },
+        ],
+        status: "online",
+      });
+      await interaction.reply({
+        content: "✅ Bug mode **disabled** — status restored to normal.",
+        flags: MessageFlags.Ephemeral,
+      });
+    }
   },
 };
