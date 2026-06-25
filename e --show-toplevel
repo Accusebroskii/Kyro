@@ -1,0 +1,162 @@
+[1mdiff --git a/artifacts/api-server/src/bot/events/interactionCreate.ts b/artifacts/api-server/src/bot/events/interactionCreate.ts[m
+[1mindex b05e2ae..2c35074 100644[m
+[1m--- a/artifacts/api-server/src/bot/events/interactionCreate.ts[m
+[1m+++ b/artifacts/api-server/src/bot/events/interactionCreate.ts[m
+[36m@@ -14,7 +14,11 @@[m [mimport { logger } from "../../lib/logger.js";[m
+ import { successEmbed } from "../lib/embeds.js";[m
+ [m
+ import { handleGiveawayEnter } from "../commands/giveaway.js";[m
+[31m-import { handleTicketPanelSelect, handleTicketCreate, closeTicketWithTranscript } from "../commands/tickets.js";[m
+[32m+[m[32mimport {[m
+[32m+[m[32m  handleTicketPanelSelect,[m
+[32m+[m[32m  handleTicketCreate,[m
+[32m+[m[32m  closeTicketWithTranscript,[m
+[32m+[m[32m} from "../commands/tickets.js";[m
+ [m
+ import {[m
+   handlePanelSlotButton,[m
+[36m@@ -25,7 +29,11 @@[m [mimport {[m
+   handlePanelCancel,[m
+ } from "../lib/panelBuilder.js";[m
+ [m
+[31m-import { handleBackupRestoreConfirm, handleBackupRestoreCancel } from "../commands/backup.js";[m
+[32m+[m[32mimport {[m
+[32m+[m[32m  handleBackupRestoreConfirm,[m
+[32m+[m[32m  handleBackupRestoreCancel,[m
+[32m+[m[32m} from "../commands/backup.js";[m
+[32m+[m
+ import { handleTemplateModalSubmit } from "../commands/template.js";[m
+ import { handleCreateRolesModalSubmit } from "../commands/createroles.js";[m
+ [m
+[36m@@ -41,14 +49,11 @@[m [mexport async function onInteractionCreate(interaction: Interaction): Promise<voi[m
+       try {[m
+         await cmd.execute(interaction as ChatInputCommandInteraction);[m
+       } catch (err) {[m
+[31m-        logger.error([m
+[31m-          { err, command: interaction.commandName },[m
+[31m-          "Slash command crashed"[m
+[31m-        );[m
+[32m+[m[32m        logger.error({ err, command: interaction.commandName }, "Slash command crashed");[m
+ [m
+         const payload = {[m
+[31m-          content: "An error occurred while running this command.",[m
+[31m-          flags: 64,[m
+[32m+[m[32m          content: "❌ Error executing command.",[m
+[32m+[m[32m          flags: 64, // EPHEMERAL (fix deprecated usage)[m
+         };[m
+ [m
+         if (interaction.replied || interaction.deferred) {[m
+[36m@@ -62,27 +67,29 @@[m [mexport async function onInteractionCreate(interaction: Interaction): Promise<voi[m
+     }[m
+ [m
+     // =========================[m
+[31m-    // STRING SELECT MENUS[m
+[32m+[m[32m    // STRING SELECT[m
+     // =========================[m
+     if (interaction.isStringSelectMenu()) {[m
+       const select = interaction as StringSelectMenuInteraction;[m
+ [m
+       if (select.customId.startsWith("ticket_panel_select")) {[m
+         await handleTicketPanelSelect(select);[m
+[31m-        return;[m
+       }[m
+[32m+[m
+[32m+[m[32m      return;[m
+     }[m
+ [m
+     // =========================[m
+[31m-    // CHANNEL SELECT MENUS[m
+[32m+[m[32m    // CHANNEL SELECT[m
+     // =========================[m
+     if (interaction.isChannelSelectMenu()) {[m
+       const select = interaction as ChannelSelectMenuInteraction;[m
+ [m
+       if (select.customId.startsWith("panel_channel:")) {[m
+         await handlePanelChannelSelect(select);[m
+[31m-        return;[m
+       }[m
+[32m+[m
+[32m+[m[32m      return;[m
+     }[m
+ [m
+     // =========================[m
+[36m@@ -114,52 +121,40 @@[m [mexport async function onInteractionCreate(interaction: Interaction): Promise<voi[m
+     if (interaction.isButton()) {[m
+       const btn = interaction as ButtonInteraction;[m
+ [m
+[31m-      // Giveaway[m
+       if (btn.customId.startsWith("giveaway_enter:")) {[m
+[31m-        await handleGiveawayEnter(btn);[m
+[31m-        return;[m
+[32m+[m[32m        return await handleGiveawayEnter(btn);[m
+       }[m
+ [m
+[31m-      // Panel builder[m
+       if (btn.customId.startsWith("panel_slot:")) {[m
+[31m-        await handlePanelSlotButton(btn);[m
+[31m-        return;[m
+[32m+[m[32m        return await handlePanelSlotButton(btn);[m
+       }[m
+ [m
+       if (btn.customId.startsWith("panel_info:")) {[m
+[31m-        await handlePanelInfoButton(btn);[m
+[31m-        return;[m
+[32m+[m[32m        return await handlePanelInfoButton(btn);[m
+       }[m
+ [m
+       if (btn.customId.startsWith("panel_send:")) {[m
+[31m-        await handlePanelSend(btn);[m
+[31m-        return;[m
+[32m+[m[32m        return await handlePanelSend(btn);[m
+       }[m
+ [m
+       if (btn.customId.startsWith("panel_cancel:")) {[m
+[31m-        await handlePanelCancel(btn);[m
+[31m-        return;[m
+[32m+[m[32m        return await handlePanelCancel(btn);[m
+       }[m
+ [m
+[31m-      // Backup[m
+       if (btn.customId.startsWith("backup_restore_confirm:")) {[m
+[31m-        await handleBackupRestoreConfirm(btn);[m
+[31m-        return;[m
+[32m+[m[32m        return await handleBackupRestoreConfirm(btn);[m
+       }[m
+ [m
+       if (btn.customId === "backup_restore_cancel") {[m
+[31m-        await handleBackupRestoreCancel(btn);[m
+[31m-        return;[m
+[32m+[m[32m        return await handleBackupRestoreCancel(btn);[m
+       }[m
+ [m
+[31m-      // Tickets[m
+       if (btn.customId.startsWith("ticket_create:")) {[m
+[31m-        await handleTicketCreate(btn);[m
+[31m-        return;[m
+[32m+[m[32m        return await handleTicketCreate(btn);[m
+       }[m
+ [m
+       if (btn.customId.startsWith("ticket_close_")) {[m
+[31m-        const ticketId = parseInt(btn.customId.replace("ticket_close_", ""), 10);[m
+[32m+[m[32m        const ticketId = Number(btn.customId.replace("ticket_close_", ""));[m
+ [m
+         const [ticket] = await db[m
+           .select()[m
+[36m@@ -179,7 +174,7 @@[m [mexport async function onInteractionCreate(interaction: Interaction): Promise<voi[m
+           embeds: [[m
+             successEmbed([m
+               "Ticket Closed",[m
+[31m-              "This ticket has been closed. The channel will be deleted shortly."[m
+[32m+[m[32m              "This ticket has been closed. Channel will be deleted shortly."[m
+             ),[m
+           ],[m
+         });[m
+[36m@@ -197,7 +192,6 @@[m [mexport async function onInteractionCreate(interaction: Interaction): Promise<voi[m
+       }[m
+     }[m
+   } catch (err) {[m
+[31m-    // GLOBAL SAFETY NET (prevents silent crashes)[m
+     logger.error({ err }, "Unhandled interaction error");[m
+   }[m
+ }[m
+\ No newline at end of file[m

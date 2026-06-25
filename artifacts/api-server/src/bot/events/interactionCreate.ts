@@ -14,7 +14,11 @@ import { logger } from "../../lib/logger.js";
 import { successEmbed } from "../lib/embeds.js";
 
 import { handleGiveawayEnter } from "../commands/giveaway.js";
-import { handleTicketPanelSelect, handleTicketCreate, closeTicketWithTranscript } from "../commands/tickets.js";
+import {
+  handleTicketPanelSelect,
+  handleTicketCreate,
+  closeTicketWithTranscript,
+} from "../commands/tickets.js";
 
 import {
   handlePanelSlotButton,
@@ -25,7 +29,11 @@ import {
   handlePanelCancel,
 } from "../lib/panelBuilder.js";
 
-import { handleBackupRestoreConfirm, handleBackupRestoreCancel } from "../commands/backup.js";
+import {
+  handleBackupRestoreConfirm,
+  handleBackupRestoreCancel,
+} from "../commands/backup.js";
+
 import { handleTemplateModalSubmit } from "../commands/template.js";
 import { handleCreateRolesModalSubmit } from "../commands/createroles.js";
 
@@ -41,14 +49,11 @@ export async function onInteractionCreate(interaction: Interaction): Promise<voi
       try {
         await cmd.execute(interaction as ChatInputCommandInteraction);
       } catch (err) {
-        logger.error(
-          { err, command: interaction.commandName },
-          "Slash command crashed"
-        );
+        logger.error({ err, command: interaction.commandName }, "Slash command crashed");
 
         const payload = {
-          content: "An error occurred while running this command.",
-          flags: 64,
+          content: "❌ Error executing command.",
+          flags: 64, // EPHEMERAL (fix deprecated usage)
         };
 
         if (interaction.replied || interaction.deferred) {
@@ -62,27 +67,29 @@ export async function onInteractionCreate(interaction: Interaction): Promise<voi
     }
 
     // =========================
-    // STRING SELECT MENUS
+    // STRING SELECT
     // =========================
     if (interaction.isStringSelectMenu()) {
       const select = interaction as StringSelectMenuInteraction;
 
       if (select.customId.startsWith("ticket_panel_select")) {
         await handleTicketPanelSelect(select);
-        return;
       }
+
+      return;
     }
 
     // =========================
-    // CHANNEL SELECT MENUS
+    // CHANNEL SELECT
     // =========================
     if (interaction.isChannelSelectMenu()) {
       const select = interaction as ChannelSelectMenuInteraction;
 
       if (select.customId.startsWith("panel_channel:")) {
         await handlePanelChannelSelect(select);
-        return;
       }
+
+      return;
     }
 
     // =========================
@@ -114,52 +121,40 @@ export async function onInteractionCreate(interaction: Interaction): Promise<voi
     if (interaction.isButton()) {
       const btn = interaction as ButtonInteraction;
 
-      // Giveaway
       if (btn.customId.startsWith("giveaway_enter:")) {
-        await handleGiveawayEnter(btn);
-        return;
+        return await handleGiveawayEnter(btn);
       }
 
-      // Panel builder
       if (btn.customId.startsWith("panel_slot:")) {
-        await handlePanelSlotButton(btn);
-        return;
+        return await handlePanelSlotButton(btn);
       }
 
       if (btn.customId.startsWith("panel_info:")) {
-        await handlePanelInfoButton(btn);
-        return;
+        return await handlePanelInfoButton(btn);
       }
 
       if (btn.customId.startsWith("panel_send:")) {
-        await handlePanelSend(btn);
-        return;
+        return await handlePanelSend(btn);
       }
 
       if (btn.customId.startsWith("panel_cancel:")) {
-        await handlePanelCancel(btn);
-        return;
+        return await handlePanelCancel(btn);
       }
 
-      // Backup
       if (btn.customId.startsWith("backup_restore_confirm:")) {
-        await handleBackupRestoreConfirm(btn);
-        return;
+        return await handleBackupRestoreConfirm(btn);
       }
 
       if (btn.customId === "backup_restore_cancel") {
-        await handleBackupRestoreCancel(btn);
-        return;
+        return await handleBackupRestoreCancel(btn);
       }
 
-      // Tickets
       if (btn.customId.startsWith("ticket_create:")) {
-        await handleTicketCreate(btn);
-        return;
+        return await handleTicketCreate(btn);
       }
 
       if (btn.customId.startsWith("ticket_close_")) {
-        const ticketId = parseInt(btn.customId.replace("ticket_close_", ""), 10);
+        const ticketId = Number(btn.customId.replace("ticket_close_", ""));
 
         const [ticket] = await db
           .select()
@@ -179,7 +174,7 @@ export async function onInteractionCreate(interaction: Interaction): Promise<voi
           embeds: [
             successEmbed(
               "Ticket Closed",
-              "This ticket has been closed. The channel will be deleted shortly."
+              "This ticket has been closed. Channel will be deleted shortly."
             ),
           ],
         });
@@ -197,7 +192,6 @@ export async function onInteractionCreate(interaction: Interaction): Promise<voi
       }
     }
   } catch (err) {
-    // GLOBAL SAFETY NET (prevents silent crashes)
     logger.error({ err }, "Unhandled interaction error");
   }
 }
