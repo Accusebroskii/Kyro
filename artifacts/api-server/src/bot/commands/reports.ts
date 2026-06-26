@@ -4,6 +4,9 @@ import {
   ChannelType,
   TextChannel,
   EmbedBuilder,
+  ButtonBuilder,
+  ButtonStyle,
+  ActionRowBuilder,
 } from "discord.js";
 import { db, reportsTable, guildConfigTable } from "@workspace/db";
 import { eq } from "drizzle-orm";
@@ -95,14 +98,20 @@ export const supportCommand = {
     .setDescription("Get an invite link to the support Discord server"),
 
   async execute(interaction: ChatInputCommandInteraction) {
+    const button = new ButtonBuilder()
+      .setLabel("Join Support Server")
+      .setStyle(ButtonStyle.Link)
+      .setURL("https://discord.gg/qeNgnjUC5Z")
+      .setEmoji("🛠️");
+
+    const row = new ActionRowBuilder<ButtonBuilder>().addComponents(button);
+
     const embed = new EmbedBuilder()
       .setTitle("🛠️ Support Server")
-      .setDescription(
-        "Need help or have a question? Join our support server:\n\n[discord.gg/qeNgnjUC5Z](https://discord.gg/qeNgnjUC5Z)",
-      )
+      .setDescription("Need help or have a question? Tap the button below to join our support server.")
       .setColor(0x5865f2)
       .setTimestamp();
 
-    await interaction.reply({ embeds: [embed], ephemeral: true });
+    await interaction.reply({ embeds: [embed], components: [row], ephemeral: true });
   },
 };
