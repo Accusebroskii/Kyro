@@ -33,8 +33,12 @@ function parseLayout(raw: string): ParsedCategory[] {
   let current: ParsedCategory | null = null;
 
   for (const line of lines) {
-    // Optional emoji, then any/no separator symbol, then the actual text
-    const match = line.match(/^(\p{Emoji}\uFE0F?)?\s*[|｜\-–:⟡✦◆●→»]*\s*(.+)$/u);
+    // Optional emoji, then any/no separator symbol, then the actual text.
+    // Separator set includes "・" (katakana middle dot, U+30FB) since that's
+    // commonly used in Discord channel-list templates (e.g. "👋・welcome")
+    // and was previously missing, causing it to be captured as part of the
+    // channel name instead of being stripped.
+    const match = line.match(/^(\p{Emoji}\uFE0F?)?\s*[|｜\-–:⟡✦◆●→»・]*\s*(.+)$/u);
     if (!match) continue;
     const emoji = match[1] ?? "";
     const text = match[2]?.trim();
@@ -81,7 +85,7 @@ export const templateCommand = {
           .setStyle(TextInputStyle.Paragraph)
           .setRequired(true)
           .setMaxLength(4000)
-          .setPlaceholder("🚀 HQ\n📢 announcements\n🆕 updates\nAny separator (or none) is fine, e.g. ⟡, |, -, :"),
+          .setPlaceholder("🚀 HQ\n📢 announcements\n🆕 updates\nAny separator (or none) is fine, e.g. ⟡, |, -, :, ・"),
         ),
       );
 

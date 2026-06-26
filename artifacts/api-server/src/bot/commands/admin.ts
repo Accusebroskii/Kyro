@@ -46,6 +46,119 @@ export const roleCommand = {
   },
 };
 
+export const roleAllCommand = {
+  data: new SlashCommandBuilder()
+    .setName("role-all")
+    .setDescription("Give a role to every member in the server")
+    .addRoleOption((o) =>
+      o.setName("role").setDescription("Role to give to everyone").setRequired(true),
+    )
+    .setDefaultMemberPermissions(PermissionFlagsBits.Administrator),
+  async execute(interaction: ChatInputCommandInteraction) {
+    if (!(await checkAdmin(interaction))) return;
+
+    const role = interaction.options.getRole("role", true);
+    const guild = interaction.guild!;
+
+    // The bot's own highest role must sit above the target role in the
+    // hierarchy, or every single assignment below will fail. Catch this
+    // up front with a clear message instead of grinding through hundreds
+    // of failures.
+    const botMember = guild.members.me;
+    if (!botMember) {
+      await interaction.reply({
+        embeds: [errorEmbed("Couldn't resolve the bot's own member object in this server.")],
+        ephemeral: true,
+      });
+      return;
+    }
+    if (botMember.roles.highest.comparePositionTo(role) <= 0) {
+      await interaction.reply({
+        embeds: [
+          errorEmbed(
+            `I can't assign <@&${role.id}> because it's positioned above (or equal to) my own highest role in the role list. Move my role above it in Server Settings → Roles, then try again.`,
+          ),
+        ],
+        ephemeral: true,
+      });
+      return;
+    }
+
+    await interaction.deferReply();
+
+    // Make sure the member cache is fully populated — on larger servers
+    // Discord.js may not have every member cached yet.
+    const members = await guild.members.fetch();
+
+    const targets = members.filter((m) => !m.roles.cache.has(role.id));
+    const total = targets.size;
+
+    if (total === 0) {
+      await interaction.editReply({
+        embeds: [successEmbed("Nothing to Do", `Everyone already has <@&${role.id}>.`)],
+      });
+      return;
+    }
+
+    let succeeded = 0;
+    const failed: string[] = [];
+
+    // Process sequentially with a small delay between requests rather than
+    // firing everything at once. Discord rate-limits role-modification
+    // requests per-guild; going in order (and awaiting each one) lets the
+    // discord.js REST manager handle rate-limit backoff automatically
+    // instead of flooding it with hundreds of simultaneous requests.
+    let processed = 0;
+    const progressEvery = 25;
+
+    for (const member of targets.values()) {
+      try {
+        await member.roles.add(role.id);
+        succeeded++;
+      } catch (err: any) {
+        failed.push(`${member.user.tag}: ${err.message ?? "failed"}`);
+      }
+
+      processed++;
+      if (processed % progressEvery === 0 && processed < total) {
+        await interaction.editReply({
+          embeds: [
+            successEmbed(
+              "Adding Role...",
+              `Progress: **${processed}/${total}** members processed.`,
+            ),
+          ],
+        }).catch(() => {});
+      }
+    }
+
+    const summaryLines = [
+      `Gave <@&${role.id}> to **${succeeded}** member(s).`,
+    ];
+    if (failed.length > 0) {
+      summaryLines.push(`Failed for **${failed.length}** member(s).`);
+    }
+
+    if (failed.length > 0) {
+      await interaction.editReply({
+        embeds: [
+          {
+            title: "Role Added (with some errors)",
+            color: 0xf1c40f,
+            description: `${summaryLines.join("\n")}\n\n**Errors (first 10):**\n${failed
+              .slice(0, 10)
+              .join("\n")}`,
+          },
+        ],
+      });
+    } else {
+      await interaction.editReply({
+        embeds: [successEmbed("Role Added to Everyone", summaryLines.join("\n"))],
+      });
+    }
+  },
+};
+
 export const slowmodeCommand = {
   data: new SlashCommandBuilder()
     .setName("slowmode")

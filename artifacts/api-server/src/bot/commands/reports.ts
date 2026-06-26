@@ -92,21 +92,17 @@ export const playerreportCommand = {
 export const supportCommand = {
   data: new SlashCommandBuilder()
     .setName("support")
-    .setDescription("Submit a support request")
-    .addStringOption((o) => o.setName("title").setDescription("Brief description of your issue").setRequired(true))
-    .addStringOption((o) => o.setName("details").setDescription("Full details of your request").setRequired(true))
-    .addStringOption((o) => o.setName("server").setDescription("Multicraft server name")),
+    .setDescription("Get an invite link to the support Discord server"),
 
   async execute(interaction: ChatInputCommandInteraction) {
-    const title = interaction.options.getString("title", true);
-    const details = interaction.options.getString("details", true);
-    const server = interaction.options.getString("server");
+    const embed = new EmbedBuilder()
+      .setTitle("🛠️ Support Server")
+      .setDescription(
+        "Need help or have a question? Join our support server:\n\n[discord.gg/qeNgnjUC5Z](https://discord.gg/qeNgnjUC5Z)",
+      )
+      .setColor(0x5865f2)
+      .setTimestamp();
 
-    const [report] = await db.insert(reportsTable).values({
-      guildId: interaction.guildId!, type: "support", userId: interaction.user.id, userTag: interaction.user.tag,
-      title, description: details, serverName: server, priority: "low",
-    }).returning();
-
-    await interaction.reply({ embeds: [successEmbed("Support Request Submitted", `Your request #${report!.id} has been submitted.\nOpen a ticket with \`/ticket open\` for faster support.`)], ephemeral: true });
+    await interaction.reply({ embeds: [embed], ephemeral: true });
   },
 };

@@ -52,6 +52,15 @@ import {
   serverinfoCommand,
   userinfoCommand,
 } from "./fun.js";
+import {
+  roleCommand,
+  roleAllCommand,
+  slowmodeCommand,
+  lockCommand,
+  unlockCommand,
+  announceCommand,
+  nickCommand,
+} from "./admin.js";
 import { helpCommand } from "./help.js";
 import { inviteCommand } from "./invite.js";
 import { backupCommand } from "./backup.js"; 
@@ -91,6 +100,7 @@ const ALL_COMMANDS: Command[] = [
 
   // Admin
   roleCommand,
+  roleAllCommand,
   slowmodeCommand,
   lockCommand,
   unlockCommand,
