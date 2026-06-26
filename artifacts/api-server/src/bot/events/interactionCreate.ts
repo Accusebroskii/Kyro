@@ -8,10 +8,10 @@ import {
 } from "discord.js";
 
 import { getCommand } from "../commands/index.js";
-import { db, ticketsTable } from "@workspace/db";
+import { db, ticketsTable, guildConfigTable } from "@workspace/db";
 import { eq } from "drizzle-orm";
 import { logger } from "../../lib/logger.js";
-import { successEmbed } from "../lib/embeds.js";
+import { successEmbed, errorEmbed } from "../lib/embeds.js";
 
 import { handleGiveawayEnter } from "../commands/giveaway.js";
 import {
@@ -36,6 +36,30 @@ import {
 
 import { handleTemplateModalSubmit } from "../commands/template.js";
 import { handleCreateRolesModalSubmit } from "../commands/createroles.js";
+import { startCaptchaVerification, pendingCaptchas } from "../lib/verification.js";
+
+async function grantVerifiedRole(member: import("discord.js").GuildMember): Promise<{ ok: boolean; reason?: string }> {
+  const [config] = await db
+    .select()
+    .from(guildConfigTable)
+    .where(eq(guildConfigTable.guildId, member.guild.id))
+    .limit(1);
+
+  if (!config?.verificationEnabled || !config.verifiedRoleId) {
+    return { ok: false, reason: "Verification isn't configured on this server." };
+  }
+
+  try {
+    if (config.unverifiedRoleId) {
+      await member.roles.remove(config.unverifiedRoleId).catch(() => {});
+    }
+    await member.roles.add(config.verifiedRoleId);
+    return { ok: true };
+  } catch (err) {
+    logger.error({ err }, "Failed to grant verified role");
+    return { ok: false, reason: "I couldn't assign the verified role — check my role position and permissions." };
+  }
+}
 
 export async function onInteractionCreate(interaction: Interaction): Promise<void> {
   try {
@@ -113,6 +137,39 @@ export async function onInteractionCreate(interaction: Interaction): Promise<voi
         await handleCreateRolesModalSubmit(interaction);
         return;
       }
+
+      if (interaction.customId === "verify_captcha_modal") {
+        const member = interaction.member;
+        if (!member || !("roles" in member)) {
+          await interaction.reply({ embeds: [errorEmbed("Couldn't resolve your member info.")], flags: 64 });
+          return;
+        }
+        const guildMember = member as import("discord.js").GuildMember;
+        const pending = pendingCaptchas.get(`${interaction.guildId}:${guildMember.id}`);
+        const submitted = interaction.fields.getTextInputValue("captcha_code").trim().toUpperCase();
+
+        if (!pending) {
+          await interaction.reply({ embeds: [errorEmbed("Your verification session expired. Click the verify button again to get a new code.")], flags: 64 });
+          return;
+        }
+        if (submitted !== pending.code) {
+          await interaction.reply({ embeds: [errorEmbed("That code doesn't match. Click the verify button again to try with a new code.")], flags: 64 });
+          pendingCaptchas.delete(`${interaction.guildId}:${guildMember.id}`);
+          return;
+        }
+
+        pendingCaptchas.delete(`${interaction.guildId}:${guildMember.id}`);
+        const result = await grantVerifiedRole(guildMember);
+        await interaction.reply({
+          embeds: [
+            result.ok
+              ? successEmbed("Verified!", "You've been verified and now have access to the server. Welcome!")
+              : errorEmbed(result.reason ?? "Verification failed."),
+          ],
+          flags: 64,
+        });
+        return;
+      }
     }
 
     // =========================
@@ -120,6 +177,34 @@ export async function onInteractionCreate(interaction: Interaction): Promise<voi
     // =========================
     if (interaction.isButton()) {
       const btn = interaction as ButtonInteraction;
+
+      if (btn.customId === "verify_button") {
+        const member = btn.member as import("discord.js").GuildMember | null;
+        if (!member) {
+          await btn.reply({ embeds: [errorEmbed("Couldn't resolve your member info.")], flags: 64 });
+          return;
+        }
+        const result = await grantVerifiedRole(member);
+        await btn.reply({
+          embeds: [
+            result.ok
+              ? successEmbed("Verified!", "You've been verified and now have access to the server. Welcome!")
+              : errorEmbed(result.reason ?? "Verification failed."),
+          ],
+          flags: 64,
+        });
+        return;
+      }
+
+      if (btn.customId === "verify_captcha_start") {
+        const member = btn.member as import("discord.js").GuildMember | null;
+        if (!member) {
+          await btn.reply({ embeds: [errorEmbed("Couldn't resolve your member info.")], flags: 64 });
+          return;
+        }
+        await startCaptchaVerification(btn, member);
+        return;
+      }
 
       if (btn.customId.startsWith("giveaway_enter:")) {
         return await handleGiveawayEnter(btn);

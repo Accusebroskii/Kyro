@@ -4,6 +4,10 @@ import {
   PermissionFlagsBits,
   ChannelType,
   EmbedBuilder,
+  ButtonBuilder,
+  ButtonStyle,
+  ActionRowBuilder,
+  TextChannel,
 } from "discord.js";
 import { db, guildConfigTable, autoRolesTable, ticketTopicsTable, levelRoleRewardsTable } from "@workspace/db";
 import { eq, and } from "drizzle-orm";
@@ -12,6 +16,13 @@ import { successEmbed, errorEmbed, infoEmbed } from "../lib/embeds.js";
 import { startPanelBuilder, initialBuilderPayload } from "../lib/panelBuilder.js";
 
 const BOT_OWNER_ID = "1375707337104429088";
+
+const VERIFICATION_METHOD_LABELS: Record<string, string> = {
+  button: "Button Click",
+  reaction: "Reaction",
+  word: "Type a Word/Phrase",
+  captcha: "Captcha Code",
+};
 
 export const setupCommand = {
   data: new SlashCommandBuilder()
@@ -95,6 +106,20 @@ export const setupCommand = {
         ))
         .addIntegerOption((o) => o.setName("level").setDescription("Level required").setMinValue(1))
         .addRoleOption((o) => o.setName("role").setDescription("Role to grant")),
+    )
+    .addSubcommand((s) =>
+      s.setName("verification").setDescription("Configure member verification")
+        .addStringOption((o) => o.setName("method").setDescription("Verification method").setRequired(true).addChoices(
+          { name: "Button Click", value: "button" },
+          { name: "Reaction", value: "reaction" },
+          { name: "Type a Word/Phrase", value: "word" },
+          { name: "Captcha Code", value: "captcha" },
+          { name: "Disable Verification", value: "disable" },
+        ))
+        .addChannelOption((o) => o.setName("channel").setDescription("Channel where verification happens").addChannelTypes(ChannelType.GuildText))
+        .addRoleOption((o) => o.setName("unverifiedrole").setDescription("Role given on join, restricted from seeing the server"))
+        .addRoleOption((o) => o.setName("verifiedrole").setDescription("Role given once verified, unlocks the server"))
+        .addStringOption((o) => o.setName("word").setDescription("Required word/phrase (only for 'Type a Word/Phrase' method)")),
     )
     .setDefaultMemberPermissions(PermissionFlagsBits.Administrator),
 
@@ -241,6 +266,13 @@ export const setupCommand = {
           { name: "Anti-Raid", value: cfg.antiRaidEnabled ? "✅ Enabled" : "❌ Disabled", inline: true },
           { name: "Max Warnings", value: String(cfg.maxWarnings), inline: true },
           { name: "Join-to-Create", value: cfg.joinToCreateChannelId ? `<#${cfg.joinToCreateChannelId}>` : "Not set", inline: true },
+          {
+            name: "Verification",
+            value: cfg.verificationEnabled
+              ? `✅ ${VERIFICATION_METHOD_LABELS[cfg.verificationMethod ?? ""] ?? cfg.verificationMethod} in ${cfg.verificationChannelId ? `<#${cfg.verificationChannelId}>` : "(no channel set)"}`
+              : "❌ Disabled",
+            inline: true,
+          },
         )
         .setTimestamp();
       await interaction.reply({ embeds: [embed] });
@@ -275,6 +307,119 @@ export const setupCommand = {
           await interaction.reply({ embeds: [successEmbed("Reward Removed", `Removed the Level ${level} → <@&${role.id}> reward.`)] });
         }
       }
+
+    } else if (sub === "verification") {
+      const method = interaction.options.getString("method", true);
+
+      if (method === "disable") {
+        await db.update(guildConfigTable).set({ verificationEnabled: false }).where(eq(guildConfigTable.guildId, guildId));
+        await interaction.reply({ embeds: [successEmbed("Verification Disabled", "Member verification has been turned off. Existing unverified/verified roles are untouched.")] });
+        return;
+      }
+
+      const channel = interaction.options.getChannel("channel") as TextChannel | null;
+      const unverifiedRole = interaction.options.getRole("unverifiedrole");
+      const verifiedRole = interaction.options.getRole("verifiedrole");
+      const word = interaction.options.getString("word");
+
+      if (!channel || !unverifiedRole || !verifiedRole) {
+        await interaction.reply({
+          embeds: [errorEmbed("Setting up verification requires `channel`, `unverifiedrole`, and `verifiedrole` to all be provided.")],
+          ephemeral: true,
+        });
+        return;
+      }
+
+      if (method === "word" && !word) {
+        await interaction.reply({
+          embeds: [errorEmbed("The 'Type a Word/Phrase' method requires the `word` option to be set.")],
+          ephemeral: true,
+        });
+        return;
+      }
+
+      const botMember = interaction.guild!.members.me;
+      if (botMember && botMember.roles.highest.comparePositionTo(unverifiedRole) <= 0) {
+        await interaction.reply({
+          embeds: [errorEmbed(`I can't manage <@&${unverifiedRole.id}> because it's positioned above (or equal to) my own highest role. Move my role above it in Server Settings → Roles.`)],
+          ephemeral: true,
+        });
+        return;
+      }
+      if (botMember && botMember.roles.highest.comparePositionTo(verifiedRole) <= 0) {
+        await interaction.reply({
+          embeds: [errorEmbed(`I can't manage <@&${verifiedRole.id}> because it's positioned above (or equal to) my own highest role. Move my role above it in Server Settings → Roles.`)],
+          ephemeral: true,
+        });
+        return;
+      }
+
+      // Lock the verification channel down to only the unverified role + deny @everyone,
+      // so unverified members land somewhere they can actually see and act on.
+      await channel.permissionOverwrites.edit(interaction.guild!.roles.everyone, { ViewChannel: false });
+      await channel.permissionOverwrites.edit(unverifiedRole.id, { ViewChannel: true, SendMessages: method === "word" });
+
+      let messageId: string | undefined;
+
+      if (method === "button") {
+        const button = new ButtonBuilder()
+          .setCustomId("verify_button")
+          .setLabel("Verify")
+          .setStyle(ButtonStyle.Success)
+          .setEmoji("✅");
+        const row = new ActionRowBuilder<ButtonBuilder>().addComponents(button);
+        const embed = new EmbedBuilder()
+          .setTitle("✅ Verification Required")
+          .setDescription("Click the button below to verify and gain access to the rest of the server.")
+          .setColor(0x57f287);
+        const sent = await channel.send({ embeds: [embed], components: [row] });
+        messageId = sent.id;
+      } else if (method === "reaction") {
+        const embed = new EmbedBuilder()
+          .setTitle("✅ Verification Required")
+          .setDescription("React with ✅ below to verify and gain access to the rest of the server.")
+          .setColor(0x57f287);
+        const sent = await channel.send({ embeds: [embed] });
+        await sent.react("✅");
+        messageId = sent.id;
+      } else if (method === "word") {
+        const embed = new EmbedBuilder()
+          .setTitle("✅ Verification Required")
+          .setDescription(`Type **${word}** in this channel to verify and gain access to the rest of the server.`)
+          .setColor(0x57f287);
+        const sent = await channel.send({ embeds: [embed] });
+        messageId = sent.id;
+      } else if (method === "captcha") {
+        const button = new ButtonBuilder()
+          .setCustomId("verify_captcha_start")
+          .setLabel("Start Verification")
+          .setStyle(ButtonStyle.Primary)
+          .setEmoji("🔐");
+        const row = new ActionRowBuilder<ButtonBuilder>().addComponents(button);
+        const embed = new EmbedBuilder()
+          .setTitle("🔐 Verification Required")
+          .setDescription("Click the button below — you'll be sent a short code to type back to verify you're human.")
+          .setColor(0x57f287);
+        const sent = await channel.send({ embeds: [embed], components: [row] });
+        messageId = sent.id;
+      }
+
+      await db.update(guildConfigTable).set({
+        verificationEnabled: true,
+        verificationMethod: method,
+        verificationChannelId: channel.id,
+        verificationMessageId: messageId,
+        unverifiedRoleId: unverifiedRole.id,
+        verifiedRoleId: verifiedRole.id,
+        ...(word ? { verificationWord: word } : {}),
+      }).where(eq(guildConfigTable.guildId, guildId));
+
+      await interaction.reply({
+        embeds: [successEmbed(
+          "Verification Configured",
+          `Method: **${VERIFICATION_METHOD_LABELS[method]}**\nChannel: <#${channel.id}>\nUnverified role: <@&${unverifiedRole.id}>\nVerified role: <@&${verifiedRole.id}>\n\nNew members will now be locked to <#${channel.id}> until they verify.`,
+        )],
+      });
     }
   },
 };

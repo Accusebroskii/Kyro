@@ -26,6 +26,14 @@ export const guildConfigTable = pgTable("guild_config", {
   joinToCreateChannelId: text("join_to_create_channel_id"),
   joinToCreateCategoryId: text("join_to_create_category_id"),
   maxWarnings: integer("max_warnings").notNull().default(3),
+  // Verification system
+  verificationEnabled: boolean("verification_enabled").notNull().default(false),
+  verificationMethod: text("verification_method"), // "button" | "reaction" | "word" | "captcha"
+  verificationChannelId: text("verification_channel_id"),
+  verificationMessageId: text("verification_message_id"),
+  unverifiedRoleId: text("unverified_role_id"),
+  verifiedRoleId: text("verified_role_id"),
+  verificationWord: text("verification_word"),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow().$onUpdate(() => new Date()),
 });

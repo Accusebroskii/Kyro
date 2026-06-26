@@ -36,6 +36,16 @@ export async function onGuildMemberAdd(member: GuildMember): Promise<void> {
       }
     }
 
+    // Verification: lock new members to the unverified role
+    if (config.verificationEnabled && config.unverifiedRoleId) {
+      const unverifiedRole = member.guild.roles.cache.get(config.unverifiedRoleId);
+      if (unverifiedRole) {
+        await member.roles.add(unverifiedRole).catch((err) =>
+          logger.warn({ err }, "Failed to assign unverified role on join"),
+        );
+      }
+    }
+
     // Auto-roles
     const roles = await db
       .select()
