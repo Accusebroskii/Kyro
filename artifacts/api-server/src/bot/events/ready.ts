@@ -94,4 +94,4 @@ export async function onReady(client: Client): Promise<void> {
   } catch (err) {
     logger.error({ err }, "Failed to register slash commands");
   }
-}
+} 
