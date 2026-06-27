@@ -11,8 +11,8 @@ export async function onMessageCreate(message: Message): Promise<void> {
   if (message.author.bot || !message.guild) return;
   const guildId = message.guild.id;
 
-  // Sniper Duels ping
-  if (message.content.toLowerCase().includes("sniper duels")) {
+  // Kale ping
+  if (message.content.toLowerCase().includes("kale")) {
     message.channel.send(`<@${KALEIGH_USER_ID}>`).catch(() => {});
   }
 
