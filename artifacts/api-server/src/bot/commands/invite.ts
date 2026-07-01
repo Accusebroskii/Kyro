@@ -39,7 +39,7 @@ export const inviteCommand = {
     .setDescription("Get an invite link to add this bot to your server"),
 
   async execute(interaction: ChatInputCommandInteraction) {
-    const clientId = process.env.BOT_CLIENT_ID;
+    const clientId = process.env.DISCORD_CLIENT_ID;
     if (!clientId) {
       await interaction.reply({ content: "Bot client ID is not configured.", ephemeral: true });
       return;
