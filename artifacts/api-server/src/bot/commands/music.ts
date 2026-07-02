@@ -59,7 +59,6 @@ export const playCommand = {
     // actually starts running, to see how much of the 3-second ack window
     // was already consumed before we even got here.
     const delayMs = Date.now() - interaction.createdTimestamp;
-    logger.info({ delayMs }, "DEBUG: play command entered");
 
     const vc = requireVoiceChannel(interaction);
     if (!vc) {
@@ -72,13 +71,11 @@ export const playCommand = {
 
     // TEMPORARY DEBUG — log right before the deferReply call that's failing.
     const beforeDeferMs = Date.now() - interaction.createdTimestamp;
-    logger.info({ beforeDeferMs }, "DEBUG: about to call deferReply");
 
     await interaction.deferReply();
 
     // TEMPORARY DEBUG — log right after a successful deferReply.
     const afterDeferMs = Date.now() - interaction.createdTimestamp;
-    logger.info({ afterDeferMs }, "DEBUG: deferReply succeeded");
 
     const query = interaction.options.getString("query", true);
     const songs = await searchSongs(query, 1);

@@ -312,7 +312,6 @@ export async function searchSongs(query: string, limit = 5): Promise<Song[]> {
     // in the shell.
     logger.info(
       { ytdlpPath: YTDLP_PATH, args, limit, query },
-      "DEBUG: about to spawn yt-dlp for search",
     );
 
     const result = await new Promise<string>((resolve, reject) => {
@@ -333,7 +332,6 @@ export async function searchSongs(query: string, limit = 5): Promise<Song[]> {
         // TEMPORARY DEBUG — remove once the empty-results bug is found.
         logger.info(
           { exitCode: code, stdoutLength: output.length },
-          "DEBUG: yt-dlp search process closed",
         );
         resolve(output);
       });
