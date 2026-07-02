@@ -185,6 +185,13 @@ export async function startBot(): Promise<void> {
         created_by TEXT NOT NULL, created_by_tag TEXT NOT NULL, created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
       );
       CREATE TABLE IF NOT EXISTS music_playlist_songs (
+      CREATE TABLE IF NOT EXISTS server_backups (
+        id SERIAL PRIMARY KEY,
+        guild_id TEXT NOT NULL,
+        created_by TEXT NOT NULL,
+        data JSONB NOT NULL,
+        created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+      );
         id SERIAL PRIMARY KEY, playlist_id INTEGER NOT NULL, title TEXT NOT NULL,
         url TEXT NOT NULL, duration TEXT NOT NULL, thumbnail TEXT NOT NULL
       );
