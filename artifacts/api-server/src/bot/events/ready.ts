@@ -5,7 +5,7 @@ import { getAllCommands } from "../commands/index.js";
 import { scheduleActiveGiveaways } from "../commands/giveaway.js";
 
 // Shared bug-mode state, toggled by the /bug command. While active, the
-// rotating status interval below skips updating so the "Fixing bugs" status
+// rotating status interval below skips updating so the "Fixing Bugs 😭" status
 // (set elsewhere, e.g. owner.ts) stays visible instead of being overwritten
 // every 5 seconds.
 let bugModeActive = false;
@@ -18,7 +18,7 @@ export function setBugMode(active: boolean): void {
 
   if (active) {
     botClient.user.setPresence({
-      activities: [{ name: "fixing bugs", type: ActivityType.Watching }],
+      activities: [{ name: "Fixing Bugs 😭", type: ActivityType.Watching }],
       status: "dnd",
     });
   } else {
@@ -57,7 +57,7 @@ export async function onReady(client: Client): Promise<void> {
   ];
   let statusIndex = 0;
   const updateActivity = () => {
-    // Skip rotating while bug mode is active so the "Fixing bugs" status
+    // Skip rotating while bug mode is active so the "Fixing Bugs 😭" status
     // set by /bug isn't immediately overwritten.
     if (bugModeActive) return;
 

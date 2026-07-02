@@ -79,7 +79,7 @@ export const botinfoCommand = {
 export const bugCommand = {
   data: new SlashCommandBuilder()
     .setName("bug")
-    .setDescription("Toggle bot status to show it's fixing bugs (owner only)"),
+    .setDescription("Toggle bot status to show it's Fixing Bugs 😭 (owner only)"),
   async execute(interaction: ChatInputCommandInteraction) {
     if (interaction.user.id !== OWNER_ID) {
       await interaction.reply({
@@ -94,7 +94,7 @@ export const bugCommand = {
 
     await interaction.reply({
       content: newState
-        ? "🐛 Bug mode **enabled** — status set to \"Watching fixing bugs\"."
+        ? "🐛 Bug mode **enabled** — status set to \"Watching Fixing Bugs 😭\"."
         : "✅ Bug mode **disabled** — status restored to normal.",
       flags: MessageFlags.Ephemeral,
     });
