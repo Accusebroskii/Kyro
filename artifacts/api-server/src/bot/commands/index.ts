@@ -70,7 +70,9 @@ import { afkCommand } from "./afk.js";
 import { createRolesCommand } from "./createroles.js";
 import { rankCommand, leaderboardCommand } from "./levels.js";
 import { securityCommand } from "./security.js";
+import { embedCommand } from "./embed.js";
 import { templateCommand } from "./template.js";
+import { automodCommand } from "./automod.js";
 import { restartCommand, pingCommand, botinfoCommand, bugCommand } from "./owner.js";
 
 export interface Command {
@@ -152,6 +154,8 @@ const ALL_COMMANDS: Command[] = [
 
   // Security
   securityCommand,
+  automodCommand,
+  embedCommand,
 
   // Owner/Misc
     restartCommand,

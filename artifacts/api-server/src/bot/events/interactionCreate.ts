@@ -36,6 +36,7 @@ import {
 
 import { handleTemplateModalSubmit } from "../commands/template.js";
 import { handleCreateRolesModalSubmit } from "../commands/createroles.js";
+import { handleEmbedModalSubmit } from "../commands/embed.js";
 import { startCaptchaVerification, pendingCaptchas } from "../lib/verification.js";
 
 async function grantVerifiedRole(member: import("discord.js").GuildMember): Promise<{ ok: boolean; reason?: string }> {
@@ -128,16 +129,14 @@ export async function onInteractionCreate(interaction: Interaction): Promise<voi
         return;
       }
 
-      if (interaction.customId === "template_create_modal") {
-        await handleTemplateModalSubmit(interaction);
-        return;
-      }
-
       if (interaction.customId === "createroles_modal") {
         await handleCreateRolesModalSubmit(interaction);
         return;
       }
-
+      if (interaction.customId.startsWith("embed_create_modal:")) {
+        await handleEmbedModalSubmit(interaction);
+        return;
+      }
       if (interaction.customId === "verify_captcha_modal") {
         const member = interaction.member;
         if (!member || !("roles" in member)) {
