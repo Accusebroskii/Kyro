@@ -270,8 +270,10 @@ function createYtDlpStream(url: string): Readable {
     "--no-playlist",
     "--no-warnings",
     "--geo-bypass",
-    "--extractor-args",
-    "youtube:player_client=android",
+    "--js-runtimes",
+    "node",
+    "--remote-components",
+    "ejs:github",
     ...getCookiesArgs(),
     url,
   ]);
@@ -302,6 +304,10 @@ export async function searchSongs(query: string, limit = 5): Promise<Song[]> {
       "--no-playlist",
       "--no-warnings",
       "--geo-bypass",
+      "--js-runtimes",
+      "node",
+      "--remote-components",
+      "ejs:github",
       ...getCookiesArgs(),
       isUrl ? query : `ytsearch${limit}:${query}`,
     ];
