@@ -85,7 +85,7 @@ export const templateCommand = {
           .setStyle(TextInputStyle.Paragraph)
           .setRequired(true)
           .setMaxLength(4000)
-          .setPlaceholder("🚀 HQ\n📢 announcements\n🆕 updates\nAny separator (or none) is fine, e.g. ⟡, |, -, :, ・"),
+          .setPlaceholder("Example:\nINFORMATION\nannouncements\nupdates\n\nCOMMUNITY\ngeneral\nchat"),
         ),
       );
 

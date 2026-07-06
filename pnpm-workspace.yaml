@@ -4,6 +4,11 @@ packages:
   - lib/integrations/*
   - scripts
 
+allowBuilds:
+  esbuild: true
+  ffmpeg-static: true
+  yt-dlp-exec: true
+
 autoInstallPeers: false
 
 catalog:
