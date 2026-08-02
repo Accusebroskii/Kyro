@@ -72,7 +72,7 @@ export const roleAllCommand = {
       });
       return;
     }
-    if (botMember.roles.highest.comparePositionTo(role) <= 0) {
+    if (botMember.roles.highest.comparePositionTo(role as import("discord.js").Role) <= 0) {
       await interaction.reply({
         embeds: [
           errorEmbed(

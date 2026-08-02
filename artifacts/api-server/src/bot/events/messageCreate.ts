@@ -13,7 +13,7 @@ export async function onMessageCreate(message: Message): Promise<void> {
 
   // Kale ping
   if (message.content.toLowerCase().includes("kale")) {
-    message.channel.send(`<@${KALEIGH_USER_ID}>`).catch(() => {});
+    if ("send" in message.channel) (message.channel as import("discord.js").TextChannel).send(`<@${KALEIGH_USER_ID}>`).catch(() => {});
   }
 
   // AFK: clear AFK status if the author was AFK, and notify if a mentioned user is AFK

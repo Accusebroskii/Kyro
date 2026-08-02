@@ -220,7 +220,7 @@ export async function handlePanelChannelSelect(interaction: ChannelSelectMenuInt
     return;
   }
   draft.channelId = interaction.values[0];
-  await interaction.update(renderBuilder(sessionId, draft));
+  await (interaction as any).update(renderBuilder(sessionId, draft));
 }
 
 export async function handlePanelModalSubmit(interaction: ModalSubmitInteraction) {
@@ -239,7 +239,7 @@ export async function handlePanelModalSubmit(interaction: ModalSubmitInteraction
     const emoji = interaction.fields.getTextInputValue("emoji").trim() || undefined;
     const description = interaction.fields.getTextInputValue("description").trim() || undefined;
     draft.topics[index] = { label, emoji, description };
-    await interaction.update(renderBuilder(sessionId, draft));
+    await (interaction as any).update(renderBuilder(sessionId, draft));
     return;
   }
 
@@ -259,7 +259,7 @@ export async function handlePanelModalSubmit(interaction: ModalSubmitInteraction
     const colorInput = interaction.fields.getTextInputValue("color").trim();
     draft.color = /^#?[0-9a-fA-F]{6}$/.test(colorInput) ? (colorInput.startsWith("#") ? colorInput : `#${colorInput}`) : undefined;
 
-    await interaction.update(renderBuilder(sessionId, draft));
+    await (interaction as any).update(renderBuilder(sessionId, draft));
     return;
   }
 }
@@ -331,7 +331,7 @@ export async function handlePanelSend(interaction: ButtonInteraction) {
     .catch(() => {});
 
   drafts.delete(sessionId);
-  await interaction.update({
+  await (interaction as any).update({
     embeds: [successEmbed("Panel Sent", `Panel **${draft.panelName}** sent to <#${draft.channelId}> with ${filledTopics.length} topic(s).`)],
     components: [],
   });
@@ -340,5 +340,5 @@ export async function handlePanelSend(interaction: ButtonInteraction) {
 export async function handlePanelCancel(interaction: ButtonInteraction) {
   const [, sessionId] = interaction.customId.split(":");
   drafts.delete(sessionId);
-  await interaction.update({ embeds: [errorEmbed("Panel builder cancelled.")], components: [] });
+  await (interaction as any).update({ embeds: [errorEmbed("Panel builder cancelled.")], components: [] });
 }

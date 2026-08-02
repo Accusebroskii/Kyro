@@ -21,6 +21,7 @@ import { onMessageReactionAdd } from "./events/messageReactionAdd.js";
 import { onMessageReactionRemove } from "./events/messageReactionRemove.js";
 import { logger } from "../lib/logger.js";
 import { ensureYtDlp } from "./lib/music.js";
+import { deliverDueReminders } from "./commands/utility.js";
 
 export let botClient: Client | null = null;
 export const botStartTime = Date.now();
@@ -219,6 +220,8 @@ export async function startBot(): Promise<void> {
   try {
     await client.login(token);
     logger.info("Discord bot logged in");
+    // Deliver reminders every minute
+    setInterval(() => deliverDueReminders(client), 60_000);
   } catch (err) {
     logger.error({ err }, "Failed to login to Discord");
     throw err;

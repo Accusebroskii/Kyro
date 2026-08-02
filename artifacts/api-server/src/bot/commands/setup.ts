@@ -121,6 +121,16 @@ export const setupCommand = {
         .addRoleOption((o) => o.setName("verifiedrole").setDescription("Role given once verified, unlocks the server"))
         .addStringOption((o) => o.setName("word").setDescription("Required word/phrase (only for 'Type a Word/Phrase' method)")),
     )
+    .addSubcommand((s) =>
+      s.setName("suggestions").setDescription("Set the suggestions channel")
+        .addChannelOption((o) => o.setName("channel").setDescription("Channel where suggestions are posted").setRequired(true).addChannelTypes(ChannelType.GuildText)),
+    )
+    .addSubcommand((s) =>
+      s.setName("starboard").setDescription("Configure the starboard system")
+        .addChannelOption((o) => o.setName("channel").setDescription("Starboard channel").addChannelTypes(ChannelType.GuildText))
+        .addIntegerOption((o) => o.setName("threshold").setDescription("⭐ reactions needed to get on starboard (default: 3)").setMinValue(1).setMaxValue(50))
+        .addBooleanOption((o) => o.setName("disable").setDescription("Disable the starboard")),
+    )
     .setDefaultMemberPermissions(PermissionFlagsBits.Administrator),
 
   async execute(interaction: ChatInputCommandInteraction) {
@@ -339,14 +349,14 @@ export const setupCommand = {
       }
 
       const botMember = interaction.guild!.members.me;
-      if (botMember && botMember.roles.highest.comparePositionTo(unverifiedRole) <= 0) {
+      if (botMember && botMember.roles.highest.comparePositionTo(unverifiedRole as import("discord.js").Role) <= 0) {
         await interaction.reply({
           embeds: [errorEmbed(`I can't manage <@&${unverifiedRole.id}> because it's positioned above (or equal to) my own highest role. Move my role above it in Server Settings → Roles.`)],
           ephemeral: true,
         });
         return;
       }
-      if (botMember && botMember.roles.highest.comparePositionTo(verifiedRole) <= 0) {
+      if (botMember && botMember.roles.highest.comparePositionTo(verifiedRole as import("discord.js").Role) <= 0) {
         await interaction.reply({
           embeds: [errorEmbed(`I can't manage <@&${verifiedRole.id}> because it's positioned above (or equal to) my own highest role. Move my role above it in Server Settings → Roles.`)],
           ephemeral: true,
@@ -420,6 +430,31 @@ export const setupCommand = {
           `Method: **${VERIFICATION_METHOD_LABELS[method]}**\nChannel: <#${channel.id}>\nUnverified role: <@&${unverifiedRole.id}>\nVerified role: <@&${verifiedRole.id}>\n\nNew members will now be locked to <#${channel.id}> until they verify.`,
         )],
       });
+
+    } else if (sub === "suggestions") {
+      const channel = interaction.options.getChannel("channel", true);
+      await db.update(guildConfigTable).set({ suggestionsChannelId: channel.id }).where(eq(guildConfigTable.guildId, guildId));
+      await interaction.reply({ embeds: [successEmbed("Suggestions Configured", `Suggestions will be posted in <#${channel.id}>. Members can use \`/suggest\` to submit ideas.`)] });
+
+    } else if (sub === "starboard") {
+      const disable = interaction.options.getBoolean("disable");
+      if (disable) {
+        await db.update(guildConfigTable).set({ starboardChannelId: null }).where(eq(guildConfigTable.guildId, guildId));
+        await interaction.reply({ embeds: [successEmbed("Starboard Disabled", "The starboard has been turned off.")] });
+        return;
+      }
+      const channel = interaction.options.getChannel("channel");
+      const threshold = interaction.options.getInteger("threshold");
+      if (!channel && !threshold) {
+        await interaction.reply({ embeds: [errorEmbed("Please provide a `channel` and/or `threshold`.")] , ephemeral: true });
+        return;
+      }
+      await db.update(guildConfigTable).set({
+        ...(channel ? { starboardChannelId: channel.id } : {}),
+        ...(threshold ? { starboardThreshold: threshold } : {}),
+      }).where(eq(guildConfigTable.guildId, guildId));
+      const [cfg] = await db.select().from(guildConfigTable).where(eq(guildConfigTable.guildId, guildId)).limit(1);
+      await interaction.reply({ embeds: [successEmbed("Starboard Configured", `Channel: ${cfg?.starboardChannelId ? `<#${cfg.starboardChannelId}>` : "Not set"}\nThreshold: **${cfg?.starboardThreshold ?? 3} ⭐** to get on the board`)] });
     }
   },
 };

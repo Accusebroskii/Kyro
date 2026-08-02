@@ -14,6 +14,7 @@ import {
 } from "./moderation.js";
 import {
   roleCommand,
+  roleAllCommand,
   slowmodeCommand,
   lockCommand,
   unlockCommand,
@@ -51,19 +52,26 @@ import {
   pollCommand,
   serverinfoCommand,
   userinfoCommand,
+  shipCommand,
+  rpsCommand,
+  wyrCommand,
+  hackCommand,
+  roastCommand,
+  ppCommand,
+  memeCommand,
+  triviaCommand,
 } from "./fun.js";
 import {
-  roleCommand,
-  roleAllCommand,
-  slowmodeCommand,
-  lockCommand,
-  unlockCommand,
-  announceCommand,
-  nickCommand,
-} from "./admin.js";
+  unbanCommand,
+  modlogsCommand,
+  snipeCommand,
+  moveCommand,
+  suggestCommand,
+  remindmeCommand,
+} from "./utility.js";
 import { helpCommand } from "./help.js";
 import { inviteCommand } from "./invite.js";
-import { backupCommand } from "./backup.js"; 
+import { backupCommand } from "./backup.js";
 import { giveawayCommand } from "./giveaway.js";
 import { reactionRoleCommand } from "./reactionrole.js";
 import { afkCommand } from "./afk.js";
@@ -81,13 +89,6 @@ export interface Command {
 }
 
 const ALL_COMMANDS: Command[] = [
-  reactionRoleCommand,
-  backupCommand,
-  rankCommand,
-  leaderboardCommand,
-  templateCommand,
-  createRolesCommand,
-  giveawayCommand,
   // Moderation
   banCommand,
   kickCommand,
@@ -99,6 +100,8 @@ const ALL_COMMANDS: Command[] = [
   timeoutCommand,
   untimeoutCommand,
   purgeCommand,
+  unbanCommand,
+  modlogsCommand,
 
   // Admin
   roleCommand,
@@ -108,6 +111,12 @@ const ALL_COMMANDS: Command[] = [
   unlockCommand,
   announceCommand,
   nickCommand,
+
+  // Utility
+  snipeCommand,
+  moveCommand,
+  suggestCommand,
+  remindmeCommand,
 
   // Setup
   setupCommand,
@@ -146,23 +155,46 @@ const ALL_COMMANDS: Command[] = [
   pollCommand,
   serverinfoCommand,
   userinfoCommand,
+  shipCommand,
+  rpsCommand,
+  wyrCommand,
+  hackCommand,
+  roastCommand,
+  ppCommand,
+  memeCommand,
+  triviaCommand,
   afkCommand,
 
-  // Help
+  // Leveling
+  rankCommand,
+  leaderboardCommand,
+
+  // Giveaways
+  giveawayCommand,
+
+  // Reaction roles
+  reactionRoleCommand,
+
+  // Utility misc
+  backupCommand,
+  createRolesCommand,
+  templateCommand,
+  embedCommand,
+
+  // Help & Info
   helpCommand,
   inviteCommand,
 
-  // Security
+  // Security & AutoMod
   securityCommand,
   automodCommand,
-  embedCommand,
 
   // Owner/Misc
-    restartCommand,
-    pingCommand,
-    botinfoCommand,
-    bugCommand,
-  ];
+  restartCommand,
+  pingCommand,
+  botinfoCommand,
+  bugCommand,
+];
 
 const commandMap = new Map<string, Command>(
   ALL_COMMANDS.map((c) => [c.data.name, c]),

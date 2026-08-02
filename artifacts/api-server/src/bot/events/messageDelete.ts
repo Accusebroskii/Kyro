@@ -2,12 +2,23 @@ import { Message, PartialMessage, TextChannel, EmbedBuilder } from "discord.js";
 import { db, guildConfigTable } from "@workspace/db";
 import { eq } from "drizzle-orm";
 import { logger } from "../../lib/logger.js";
+import { snipeCache } from "../lib/snipeCache.js";
 
 export async function onMessageDelete(
   message: Message | PartialMessage,
 ): Promise<void> {
   if (!message.guild) return;
   if (message.author?.bot) return;
+
+  // Cache for /snipe
+  if (message.content && message.author) {
+    snipeCache.set(message.channelId, {
+      content: message.content.slice(0, 2000),
+      authorTag: message.author.tag,
+      authorAvatar: message.author.displayAvatarURL(),
+      timestamp: new Date(),
+    });
+  }
 
   const guildId = message.guild.id;
   try {

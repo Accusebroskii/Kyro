@@ -34,6 +34,11 @@ export const guildConfigTable = pgTable("guild_config", {
   unverifiedRoleId: text("unverified_role_id"),
   verifiedRoleId: text("verified_role_id"),
   verificationWord: text("verification_word"),
+  // Suggestions system
+  suggestionsChannelId: text("suggestions_channel_id"),
+  // Starboard
+  starboardChannelId: text("starboard_channel_id"),
+  starboardThreshold: integer("starboard_threshold").notNull().default(3),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow().$onUpdate(() => new Date()),
 });

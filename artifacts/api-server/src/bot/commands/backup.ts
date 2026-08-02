@@ -82,7 +82,7 @@ export const backupCommand = {
         }));
 
       const channels: BackupChannel[] = guild.channels.cache.map((ch) => {
-        const overwrites: BackupOverwrite[] = ch.permissionOverwrites.cache.map((ow) => {
+        const overwrites: BackupOverwrite[] = ("permissionOverwrites" in ch ? (ch as any).permissionOverwrites.cache : new Map()).map((ow: any) => {
           if (ow.type === OverwriteType.Role) {
             const role = guild.roles.cache.get(ow.id);
             return {
@@ -105,7 +105,7 @@ export const backupCommand = {
           type: ch.type,
           topic: "topic" in ch ? (ch as any).topic : null,
           nsfw: "nsfw" in ch ? (ch as any).nsfw : false,
-          position: ch.position,
+          position: "position" in ch ? (ch as any).position : 0,
           parentName: ch.parent?.name ?? null,
           isCategory: ch.type === ChannelType.GuildCategory,
           overwrites,
