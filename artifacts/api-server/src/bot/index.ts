@@ -202,6 +202,47 @@ export async function startBot(): Promise<void> {
         reason TEXT, message_id TEXT, channel_id TEXT, status TEXT NOT NULL DEFAULT 'open',
         created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
       );
+      CREATE TABLE IF NOT EXISTS reminders (
+        id SERIAL PRIMARY KEY, guild_id TEXT NOT NULL, user_id TEXT NOT NULL,
+        channel_id TEXT NOT NULL, message TEXT NOT NULL,
+        remind_at TIMESTAMP WITH TIME ZONE NOT NULL, delivered BOOLEAN NOT NULL DEFAULT false,
+        created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+      );
+      CREATE TABLE IF NOT EXISTS suggestions (
+        id SERIAL PRIMARY KEY, guild_id TEXT NOT NULL, user_id TEXT NOT NULL,
+        user_tag TEXT NOT NULL, content TEXT NOT NULL, message_id TEXT,
+        created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+      );
+      CREATE TABLE IF NOT EXISTS starboard_posts (
+        id SERIAL PRIMARY KEY, guild_id TEXT NOT NULL, message_id TEXT NOT NULL UNIQUE,
+        starboard_message_id TEXT NOT NULL, star_count INTEGER NOT NULL DEFAULT 0,
+        created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+      );
+      CREATE TABLE IF NOT EXISTS afk_status (
+        id SERIAL PRIMARY KEY, guild_id TEXT NOT NULL, user_id TEXT NOT NULL,
+        reason TEXT, created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+      );
+      CREATE TABLE IF NOT EXISTS levels (
+        id SERIAL PRIMARY KEY, guild_id TEXT NOT NULL, user_id TEXT NOT NULL,
+        xp INTEGER NOT NULL DEFAULT 0, level INTEGER NOT NULL DEFAULT 0,
+        created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+        UNIQUE(guild_id, user_id)
+      );
+    `);
+    /* Add new columns to guild_config that may not exist on older deployments */
+    await db.execute(sql`
+      ALTER TABLE guild_config ADD COLUMN IF NOT EXISTS verification_enabled BOOLEAN DEFAULT false;
+      ALTER TABLE guild_config ADD COLUMN IF NOT EXISTS verification_method TEXT;
+      ALTER TABLE guild_config ADD COLUMN IF NOT EXISTS verification_channel_id TEXT;
+      ALTER TABLE guild_config ADD COLUMN IF NOT EXISTS unverified_role_id TEXT;
+      ALTER TABLE guild_config ADD COLUMN IF NOT EXISTS verified_role_id TEXT;
+      ALTER TABLE guild_config ADD COLUMN IF NOT EXISTS verification_word TEXT;
+      ALTER TABLE guild_config ADD COLUMN IF NOT EXISTS suggestions_channel_id TEXT;
+      ALTER TABLE guild_config ADD COLUMN IF NOT EXISTS starboard_channel_id TEXT;
+      ALTER TABLE guild_config ADD COLUMN IF NOT EXISTS starboard_threshold INTEGER DEFAULT 3;
+      ALTER TABLE guild_config ADD COLUMN IF NOT EXISTS boost_message_enabled BOOLEAN DEFAULT false;
+      ALTER TABLE guild_config ADD COLUMN IF NOT EXISTS boost_message TEXT;
+      ALTER TABLE guild_config ADD COLUMN IF NOT EXISTS boost_channel_id TEXT;
     `);
     logger.info("Database tables created/verified");
   } catch (err) {

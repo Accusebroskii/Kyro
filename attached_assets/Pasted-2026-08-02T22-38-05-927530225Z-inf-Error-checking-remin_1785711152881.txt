@@ -1,0 +1,61 @@
+2026-08-02T22:38:05.927530225Z [inf]  Error checking reminders
+2026-08-02T22:38:45.677831657Z [inf]  Starting Container
+2026-08-02T22:38:46.298276739Z [inf]  Fetching latest yt-dlp...
+2026-08-02T22:38:46.576833023Z [inf]  yt-dlp updated: 2026.07.04
+2026-08-02T22:38:46.847333168Z [inf]  Server listening
+2026-08-02T22:38:46.847337689Z [err]  (node:1) Warning: SECURITY WARNING: The SSL modes 'prefer', 'require', and 'verify-ca' are treated as aliases for 'verify-full'.
+2026-08-02T22:38:46.847341991Z [err]  In the next major version (pg-connection-string v3.0.0 and pg v9.0.0), these modes will adopt standard libpq semantics, which have weaker security guarantees.
+2026-08-02T22:38:46.847346557Z [err]  
+2026-08-02T22:38:46.847351091Z [err]  To prepare for this change:
+2026-08-02T22:38:46.847354862Z [err]  - If you want the current behavior, explicitly use 'sslmode=verify-full'
+2026-08-02T22:38:46.847359766Z [err]  - If you want libpq compatibility now, use 'uselibpqcompat=true&sslmode=require'
+2026-08-02T22:38:46.847363414Z [err]  
+2026-08-02T22:38:46.847367601Z [err]  See https://www.postgresql.org/docs/current/libpq-ssl.html for libpq SSL mode definitions.
+2026-08-02T22:38:46.847372017Z [err]  (Use `node --trace-warnings ...` to show where the warning was created)
+2026-08-02T22:38:47.394389421Z [inf]  Table creation failed, continuing anyway
+2026-08-02T22:38:48.393132743Z [inf]  yt-dlp is available
+2026-08-02T22:38:48.675797886Z [inf]  Discord bot logged in
+2026-08-02T22:38:48.777146582Z [inf]  Bot is ready
+2026-08-02T22:38:49.404606433Z [inf]    'volume',     'loop',         'shuffle',       'remove',
+2026-08-02T22:38:49.404614443Z [inf]    'disconnect', 'playlist',     '8ball',         'coinflip',
+2026-08-02T22:38:49.404618397Z [inf]    'dice',       'joke',         'poll',          'serverinfo',
+2026-08-02T22:38:49.404623477Z [inf]    'userinfo',   'ship',         'rps',           'wyr',
+2026-08-02T22:38:49.404627583Z [inf]    'hack',       'roast',        'pp',            'meme',
+2026-08-02T22:38:49.404633405Z [inf]    'trivia',     'afk',          'rank',          'leaderboard',
+2026-08-02T22:38:49.404634420Z [inf]  Loaded commands: [
+2026-08-02T22:38:49.404639978Z [inf]    'ban',        'kick',         'mute',          'unmute',
+2026-08-02T22:38:49.404640942Z [inf]    'giveaway',   'reactionrole', 'backup',        'createroles',
+2026-08-02T22:38:49.404647534Z [inf]    'warn',       'warnings',     'clearwarnings', 'timeout',
+2026-08-02T22:38:49.404647557Z [inf]    'template',   'embed',        'help',          'invite',
+2026-08-02T22:38:49.404652681Z [inf]    'security',   'automod',      'restart',       'ping',
+2026-08-02T22:38:49.404655504Z [inf]    'untimeout',  'purge',        'unban',         'modlogs',
+2026-08-02T22:38:49.404658749Z [inf]    'botinfo',    'bug',          'say',           'dm',
+2026-08-02T22:38:49.404662595Z [inf]    'role',       'role-all',     'slowmode',      'lock',
+2026-08-02T22:38:49.404665140Z [inf]    'setstatus',  'guilds',       'globalban',     'botname',
+2026-08-02T22:38:49.404668412Z [inf]    'unlock',     'announce',     'nick',          'snipe',
+2026-08-02T22:38:49.404672670Z [inf]    'move',       'suggest',      'remindme',      'setup',
+2026-08-02T22:38:49.404677949Z [inf]    'ticket',     'modmail',      'bugreport',     'playerreport',
+2026-08-02T22:38:49.404681858Z [inf]    'support',    'play',         'pause',         'resume',
+2026-08-02T22:38:49.404685978Z [inf]    'skip',       'stop',         'queue',         'nowplaying',
+2026-08-02T22:38:49.405894838Z [inf]    'botavatar',  'broadcast'
+2026-08-02T22:38:49.405898407Z [inf]  ]
+2026-08-02T22:38:49.552470089Z [inf]  Slash commands registered globally
+2026-08-02T22:38:59.739187208Z [inf]  Stopping Container
+2026-08-02T22:39:49.861054842Z [inf]  Error checking reminders
+2026-08-02T22:40:50.192011129Z [inf]  Error checking reminders
+2026-08-02T22:41:50.110160621Z [inf]  Error checking reminders
+2026-08-02T22:42:50.700128877Z [inf]  Error checking reminders
+2026-08-02T22:43:10.699056269Z [inf]  Error in automod messageCreate
+2026-08-02T22:43:13.364416867Z [inf]  Error in automod messageCreate
+2026-08-02T22:43:53.620634069Z [inf]  Error checking reminders
+2026-08-02T22:44:53.637698410Z [inf]  Error checking reminders
+2026-08-02T22:45:54.410887386Z [inf]  Error checking reminders
+2026-08-02T22:46:54.521524499Z [inf]  Error checking reminders
+2026-08-02T22:47:54.632829059Z [inf]  Error checking reminders
+2026-08-02T22:48:55.391006426Z [inf]  Error checking reminders
+2026-08-02T22:49:56.099714948Z [inf]  Error checking reminders
+2026-08-02T22:50:56.097011398Z [inf]  Error checking reminders
+2026-08-02T22:51:26.089506954Z [inf]  Slash command crashed
+2026-08-02T22:51:55.919989263Z [inf]  Error checking reminders
+2026-08-02T22:51:55.921429572Z [inf]  Slash command crashed
+2026-08-02T22:52:03.653118008Z [inf]  Slash command crashed
