@@ -70,7 +70,6 @@ export const botinfoCommand = {
           .setThumbnail(client.user?.displayAvatarURL() ?? "")
           .addFields(
             { name: "👑 Owner", value: "<@1375707337104429088> (accusebroski_)", inline: true },
-            { name: "🧑‍💻 Developer", value: "<@1285144624096084000> (ziadlive)", inline: true },
             { name: "\u200b", value: "\u200b", inline: true },
             { name: "👥 Cached Users", value: `${client.users.cache.size}`, inline: true },
             { name: "🌐 Servers", value: `${client.guilds.cache.size}`, inline: true },
