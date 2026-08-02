@@ -81,7 +81,20 @@ import { securityCommand } from "./security.js";
 import { embedCommand } from "./embed.js";
 import { templateCommand } from "./template.js";
 import { automodCommand } from "./automod.js";
-import { restartCommand, pingCommand, botinfoCommand, bugCommand } from "./owner.js";
+import {
+  restartCommand,
+  pingCommand,
+  botinfoCommand,
+  bugCommand,
+  sayCommand,
+  dmCommand,
+  setstatusCommand,
+  guildsCommand,
+  globalbanCommand,
+  botnameCommand,
+  botavatarCommand,
+  broadcastCommand,
+} from "./owner.js";
 
 export interface Command {
   data: { name: string; toJSON(): object };
@@ -194,6 +207,14 @@ const ALL_COMMANDS: Command[] = [
   pingCommand,
   botinfoCommand,
   bugCommand,
+  sayCommand,
+  dmCommand,
+  setstatusCommand,
+  guildsCommand,
+  globalbanCommand,
+  botnameCommand,
+  botavatarCommand,
+  broadcastCommand,
 ];
 
 const commandMap = new Map<string, Command>(
