@@ -79,7 +79,7 @@ export const botinfoCommand = {
             { name: "📦 Node.js", value: process.version, inline: true },
             { name: "💾 Memory", value: `${Math.round(process.memoryUsage().heapUsed / 1024 / 1024)}MB`, inline: true },
           )
-          .setFooter({ text: "Kyro • Multicraft" })
+          .setFooter({ text: "Kyro • " })
           .setTimestamp(),
       ],
     });
@@ -447,7 +447,7 @@ export const broadcastCommand = {
       .setTitle("📣 Announcement from Kyro")
       .setDescription(text)
       .setColor(0x5865f2)
-      .setFooter({ text: "Kyro Bot • Multicraft" })
+      .setFooter({ text: "Kyro Bot • Community" })
       .setTimestamp();
 
     for (const guild of interaction.client.guilds.cache.values()) {

@@ -133,12 +133,12 @@ const COMMAND_CATEGORIES: Record<
       { name: "/playlist list", description: "List all saved playlists" },
     ],
   },
-  "Multicraft Support": {
+  "Bug Support": {
     emoji: "🎮",
     commands: [
       {
         name: "/bugreport",
-        description: "Submit a bug report for a Multicraft server",
+        description: "Submit a bug report for a server member report",
       },
       {
         name: "/playerreport",
@@ -213,7 +213,7 @@ export const helpCommand = {
           { name: "Tickets", value: "Tickets" },
           { name: "ModMail", value: "ModMail" },
           { name: "Music", value: "Music" },
-          { name: "Multicraft Support", value: "Multicraft Support" },
+          { name: " Server Support", value: "Server Support" },
           { name: "Fun", value: "Fun" },
           { name: "Utility", value: "Utility" },
           { name: "Security", value: "Security" },

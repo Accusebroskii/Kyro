@@ -1,6 +1,6 @@
-# Multicraft Community Discord Bot
+#  Community Discord Bot
 
-A full-featured Discord bot for a Multicraft gaming community with a React web dashboard. All commands are slash commands only.
+A full-featured Discord bot for a gaming community with a React web dashboard. All commands are slash commands only.
 
 ## Run & Operate
 

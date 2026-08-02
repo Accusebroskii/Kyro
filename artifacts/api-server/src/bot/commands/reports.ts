@@ -24,10 +24,10 @@ async function sendToStaffChannel(interaction: ChatInputCommandInteraction, embe
 export const bugreportCommand = {
   data: new SlashCommandBuilder()
     .setName("bugreport")
-    .setDescription("Submit a Multicraft bug report")
+    .setDescription("Submit a bug report")
     .addStringOption((o) => o.setName("title").setDescription("Short bug title").setRequired(true))
     .addStringOption((o) => o.setName("description").setDescription("Detailed bug description").setRequired(true))
-    .addStringOption((o) => o.setName("server").setDescription("Multicraft server name (if applicable)"))
+    .addStringOption((o) => o.setName("server").setDescription("server name (if applicable)"))
     .addStringOption((o) => o.setName("priority").setDescription("Priority level").addChoices(
       { name: "Low", value: "low" }, { name: "Medium", value: "medium" }, { name: "High", value: "high" }, { name: "Critical", value: "critical" }
     )),
@@ -64,7 +64,7 @@ export const playerreportCommand = {
     .addUserOption((o) => o.setName("player").setDescription("Player to report").setRequired(true))
     .addStringOption((o) => o.setName("reason").setDescription("Reason for report").setRequired(true))
     .addStringOption((o) => o.setName("details").setDescription("Additional details / evidence"))
-    .addStringOption((o) => o.setName("server").setDescription("Multicraft server name")),
+    .addStringOption((o) => o.setName("server").setDescription("server name")),
 
   async execute(interaction: ChatInputCommandInteraction) {
     const target = interaction.options.getUser("player", true);
