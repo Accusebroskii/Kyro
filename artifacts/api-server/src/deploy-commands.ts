@@ -1,27 +1,24 @@
 import { REST, Routes } from "discord.js";
-import { readdirSync } from "fs";
-import { pathToFileURL } from "url";
-import path from "path";
+import { getAllCommands } from "./bot/commands/index.js";
 
 const token = (process.env.DISCORD_TOKEN ?? process.env.DISCORD_BOT_TOKEN)!;
 const clientId = process.env.DISCORD_CLIENT_ID!;
 
-const commands: object[] = [];
-
-const commandsPath = path.join(process.cwd(), "src/bot/commands");
-const commandFiles = readdirSync(commandsPath).filter(f => f.endsWith(".ts") || f.endsWith(".js"));
-
-for (const file of commandFiles) {
-  const filePath = path.join(commandsPath, file);
-  const mod = await import(pathToFileURL(filePath).href);
-  const command = mod.default ?? Object.values(mod).find((v: any) => v?.data && typeof v.data.toJSON === "function");
-  if (command?.data) {
-    commands.push(command.data.toJSON());
-  }
+if (!token) {
+  console.error("Missing DISCORD_TOKEN / DISCORD_BOT_TOKEN");
+  process.exit(1);
+}
+if (!clientId) {
+  console.error("Missing DISCORD_CLIENT_ID");
+  process.exit(1);
 }
 
-const rest = new REST().setToken(token);
+const commands = getAllCommands().map((c) => c.data.toJSON());
 
-console.log(`Registering ${commands.length} commands...`);
+console.log(`Registering ${commands.length} commands globally...`);
+console.log("Commands:", commands.map((c: any) => c.name).join(", "));
+
+const rest = new REST().setToken(token);
 await rest.put(Routes.applicationCommands(clientId), { body: commands });
-console.log("Done!");
+
+console.log(`✅ Done! ${commands.length} commands registered.`);

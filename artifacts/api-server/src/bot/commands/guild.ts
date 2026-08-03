@@ -28,6 +28,17 @@ export const guildCommand = {
       return;
     }
 
+    const sub = interaction.options.getSubcommand();
+
+    // Graceful fallback for stale Discord-cached "list" subcommand
+    if (sub === "list") {
+      await interaction.reply({
+        content: "Use `/guilds` to see all servers the bot is in.",
+        flags: MessageFlags.Ephemeral,
+      });
+      return;
+    }
+
     const guildId = interaction.options.getString("server_id", true).trim();
 
     try {
