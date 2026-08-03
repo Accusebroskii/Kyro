@@ -80,7 +80,7 @@ export async function onReady(client: Client): Promise<void> {
 
   // Convert commands to Discord API format
   const commandData = commands.map((c) => c.data.toJSON());
-  const rest = new REST().setToken(process.env["DISCORD_BOT_TOKEN"]!);
+  const rest = new REST().setToken((process.env["DISCORD_TOKEN"] ?? process.env["DISCORD_BOT_TOKEN"])!);
   try {
     await rest.put(Routes.applicationCommands(client.user.id), {
       body: commandData,

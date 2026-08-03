@@ -81,6 +81,8 @@ import { securityCommand } from "./security.js";
 import { embedCommand } from "./embed.js";
 import { templateCommand } from "./template.js";
 import { automodCommand } from "./automod.js";
+import { guildCommand } from "./guild.js";
+
 import {
   restartCommand,
   pingCommand,
@@ -210,11 +212,11 @@ const ALL_COMMANDS: Command[] = [
   sayCommand,
   dmCommand,
   setstatusCommand,
-  guildsCommand,
   globalbanCommand,
   botnameCommand,
   botavatarCommand,
   broadcastCommand,
+  guildCommand,
 ];
 
 const commandMap = new Map<string, Command>(

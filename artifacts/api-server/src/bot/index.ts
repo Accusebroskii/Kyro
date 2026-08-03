@@ -130,9 +130,9 @@ export function createBotClient(): Client {
 }
 
 export async function startBot(): Promise<void> {
-  const token = process.env["DISCORD_BOT_TOKEN"];
+  const token = process.env["DISCORD_TOKEN"] ?? process.env["DISCORD_BOT_TOKEN"];
   if (!token) {
-    logger.warn("DISCORD_BOT_TOKEN not set — bot will not start");
+    logger.warn("DISCORD_TOKEN not set — bot will not start");
     return;
   }
 

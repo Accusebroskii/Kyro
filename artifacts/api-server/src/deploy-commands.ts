@@ -3,7 +3,7 @@ import { readdirSync } from "fs";
 import { pathToFileURL } from "url";
 import path from "path";
 
-const token = process.env.DISCORD_BOT_TOKEN!;
+const token = (process.env.DISCORD_TOKEN ?? process.env.DISCORD_BOT_TOKEN)!;
 const clientId = process.env.DISCORD_CLIENT_ID!;
 
 const commands: object[] = [];
