@@ -1,9 +1,14 @@
-import { SlashCommandBuilder, ChatInputCommandInteraction } from "discord.js";
+import { SlashCommandBuilder, ChatInputCommandInteraction, EmbedBuilder } from "discord.js";
 
 export default {
   data: new SlashCommandBuilder()
     .setName("guild")
-    .setDescription("Guild related commands")
+    .setDescription("Guild management commands")
+    .addSubcommand(sub =>
+      sub
+        .setName("list")
+        .setDescription("Shows all servers the bot is in")
+    )
     .addSubcommand(sub =>
       sub
         .setName("invite")
@@ -17,14 +22,34 @@ export default {
     ),
 
   async execute(interaction: ChatInputCommandInteraction) {
-    if (interaction.options.getSubcommand() === "invite") {
+    const subcommand = interaction.options.getSubcommand();
+
+    if (subcommand === "list") {
+      const guilds = interaction.client.guilds.cache;
+
+      const embed = new EmbedBuilder()
+        .setTitle("🌐 Bot Servers")
+        .setDescription(
+          guilds.map(g => `**${g.name}**\n\`${g.id}\``).join("\n\n") || "No servers found."
+        )
+        .setFooter({
+          text: `Total Servers: ${guilds.size}`
+        });
+
+      return interaction.reply({
+        embeds: [embed],
+        ephemeral: true
+      });
+    }
+
+    if (subcommand === "invite") {
       const guildId = interaction.options.getString("server_id", true);
 
       try {
         const guild = await interaction.client.guilds.fetch(guildId);
 
         const channel = guild.channels.cache.find(
-          c => c.isTextBased()
+          channel => channel.isTextBased()
         );
 
         if (!channel || !channel.isTextBased()) {
@@ -40,11 +65,11 @@ export default {
         });
 
         return interaction.reply({
-          content: `✅ Invite created: ${invite.url}`,
+          content: `✅ Invite for **${guild.name}**:\n${invite.url}`,
           ephemeral: true
         });
 
-      } catch (error) {
+      } catch {
         return interaction.reply({
           content: "❌ I can't access that server or create an invite.",
           ephemeral: true
