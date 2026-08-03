@@ -22,6 +22,12 @@ export default {
     ),
 
   async execute(interaction: ChatInputCommandInteraction) {
+    if (interaction.user.id !== process.env.OWNER_ID) {
+      return interaction.reply({
+        content: "❌ This command is only available to the bot owner.",
+        ephemeral: true
+      });
+    }
     const subcommand = interaction.options.getSubcommand();
 
     if (subcommand === "list") {
