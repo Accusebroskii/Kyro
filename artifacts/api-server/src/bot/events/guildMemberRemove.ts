@@ -30,7 +30,7 @@ export async function onGuildMemberRemove(
       .setColor(0xed4245)
       .setThumbnail(member.user?.displayAvatarURL() ?? null)
       .addFields(
-        { name: "User", value: `${member.user?.tag ?? "Unknown"} (<@${member.id}>)`, inline: true },
+        { name: "User", value: `${member.user.username ?? "Unknown"} (<@${member.id}>)`, inline: true },
         {
           name: "Joined",
           value: joinedTimestamp ? `<t:${Math.floor(joinedTimestamp / 1000)}:R>` : "Unknown",

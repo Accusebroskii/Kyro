@@ -25,10 +25,10 @@ export const banCommand = {
     const deleteDays = interaction.options.getInteger("delete_days") ?? 0;
     try {
       await interaction.guild!.members.ban(target.id, { reason, deleteMessageDays: deleteDays });
-      await db.insert(modLogsTable).values({ guildId: interaction.guildId!, action: "ban", targetId: target.id, targetTag: target.tag, moderatorId: interaction.user.id, moderatorTag: interaction.user.tag, reason });
-      await interaction.reply({ embeds: [modEmbed("Ban", target.tag, interaction.user.tag, reason)] });
+      await db.insert(modLogsTable).values({ guildId: interaction.guildId!, action: "ban", targetId: target.id, targetTag: target.username, moderatorId: interaction.user.id, moderatorTag: interaction.user.username, reason });
+      await interaction.reply({ embeds: [modEmbed("Ban", target.username, interaction.user.username, reason)] });
     } catch (err) {
-      await interaction.reply({ embeds: [errorEmbed(`Could not ban ${target.tag}: ${String(err)}`)], ephemeral: true });
+      await interaction.reply({ embeds: [errorEmbed(`Could not ban ${target.username}: ${String(err)}`)], ephemeral: true });
     }
   },
 };
@@ -47,8 +47,8 @@ export const kickCommand = {
     const reason = interaction.options.getString("reason") ?? "No reason provided";
     try {
       await target.kick(reason);
-      await db.insert(modLogsTable).values({ guildId: interaction.guildId!, action: "kick", targetId: target.id, targetTag: target.user.tag, moderatorId: interaction.user.id, moderatorTag: interaction.user.tag, reason });
-      await interaction.reply({ embeds: [modEmbed("Kick", target.user.tag, interaction.user.tag, reason)] });
+      await db.insert(modLogsTable).values({ guildId: interaction.guildId!, action: "kick", targetId: target.id, targetTag: target.user.username, moderatorId: interaction.user.id, moderatorTag: interaction.user.username, reason });
+      await interaction.reply({ embeds: [modEmbed("Kick", target.user.username, interaction.user.username, reason)] });
     } catch (err) {
       await interaction.reply({ embeds: [errorEmbed(`Could not kick: ${String(err)}`)], ephemeral: true });
     }
@@ -71,8 +71,8 @@ export const muteCommand = {
     const reason = interaction.options.getString("reason") ?? "No reason provided";
     try {
       await target.timeout(mins * 60 * 1000, reason);
-      await db.insert(modLogsTable).values({ guildId: interaction.guildId!, action: "mute", targetId: target.id, targetTag: target.user.tag, moderatorId: interaction.user.id, moderatorTag: interaction.user.tag, reason, duration: `${mins}m` });
-      await interaction.reply({ embeds: [modEmbed("Mute", target.user.tag, interaction.user.tag, reason, { Duration: `${mins} minutes` })] });
+      await db.insert(modLogsTable).values({ guildId: interaction.guildId!, action: "mute", targetId: target.id, targetTag: target.user.username, moderatorId: interaction.user.id, moderatorTag: interaction.user.username, reason, duration: `${mins}m` });
+      await interaction.reply({ embeds: [modEmbed("Mute", target.user.username, interaction.user.username, reason, { Duration: `${mins} minutes` })] });
     } catch (err) {
       await interaction.reply({ embeds: [errorEmbed(String(err))], ephemeral: true });
     }
@@ -92,8 +92,8 @@ export const unmuteCommand = {
     if (!target) { await interaction.reply({ embeds: [errorEmbed("User not found.")], ephemeral: true }); return; }
     const reason = interaction.options.getString("reason") ?? "No reason provided";
     await target.timeout(null, reason);
-    await db.insert(modLogsTable).values({ guildId: interaction.guildId!, action: "unmute", targetId: target.id, targetTag: target.user.tag, moderatorId: interaction.user.id, moderatorTag: interaction.user.tag, reason });
-    await interaction.reply({ embeds: [successEmbed("Unmuted", `${target.user.tag} has been unmuted.`)] });
+    await db.insert(modLogsTable).values({ guildId: interaction.guildId!, action: "unmute", targetId: target.id, targetTag: target.user.username, moderatorId: interaction.user.id, moderatorTag: interaction.user.username, reason });
+    await interaction.reply({ embeds: [successEmbed("Unmuted", `${target.user.username} has been unmuted.`)] });
   },
 };
 
@@ -109,20 +109,20 @@ export const warnCommand = {
     const target = interaction.options.getUser("user", true);
     const reason = interaction.options.getString("reason", true);
     const guildId = interaction.guildId!;
-    await db.insert(warningsTable).values({ guildId, userId: target.id, userTag: target.tag, moderatorId: interaction.user.id, moderatorTag: interaction.user.tag, reason });
-    await db.insert(modLogsTable).values({ guildId, action: "warn", targetId: target.id, targetTag: target.tag, moderatorId: interaction.user.id, moderatorTag: interaction.user.tag, reason });
+    await db.insert(warningsTable).values({ guildId, userId: target.id, userTag: target.username, moderatorId: interaction.user.id, moderatorTag: interaction.user.username, reason });
+    await db.insert(modLogsTable).values({ guildId, action: "warn", targetId: target.id, targetTag: target.username, moderatorId: interaction.user.id, moderatorTag: interaction.user.username, reason });
 
     const [{ value: warnCount }] = await db.select({ value: count() }).from(warningsTable).where(and(eq(warningsTable.guildId, guildId), eq(warningsTable.userId, target.id), eq(warningsTable.active, true)));
     const [config] = await db.select().from(guildConfigTable).where(eq(guildConfigTable.guildId, guildId)).limit(1);
     const max = config?.maxWarnings ?? 3;
 
-    await interaction.reply({ embeds: [modEmbed("Warning", target.tag, interaction.user.tag, reason, { "Total Warnings": `${warnCount}/${max}` })] });
+    await interaction.reply({ embeds: [modEmbed("Warning", target.username, interaction.user.username, reason, { "Total Warnings": `${warnCount}/${max}` })] });
 
     if (warnCount >= max) {
       const member = interaction.options.getMember("user") as GuildMember | null;
       if (member) {
         await member.timeout(10 * 60 * 1000, `Auto-mute: reached ${max} warnings`).catch(() => {});
-        await interaction.followUp({ content: `⚠️ ${target.tag} has reached ${max} warnings and has been automatically muted for 10 minutes.` });
+        await interaction.followUp({ content: `⚠️ ${target.username} has reached ${max} warnings and has been automatically muted for 10 minutes.` });
       }
     }
   },
@@ -138,11 +138,11 @@ export const warningsCommand = {
     const target = interaction.options.getUser("user", true);
     const warns = await db.select().from(warningsTable).where(and(eq(warningsTable.guildId, interaction.guildId!), eq(warningsTable.userId, target.id)));
     if (warns.length === 0) {
-      await interaction.reply({ embeds: [successEmbed("No Warnings", `${target.tag} has no warnings.`)] });
+      await interaction.reply({ embeds: [successEmbed("No Warnings", `${target.username} has no warnings.`)] });
       return;
     }
     const { EmbedBuilder } = await import("discord.js");
-    const embed = new EmbedBuilder().setTitle(`⚠️ Warnings for ${target.tag}`).setColor(0xfee75c).setDescription(
+    const embed = new EmbedBuilder().setTitle(`⚠️ Warnings for ${target.username}`).setColor(0xfee75c).setDescription(
       warns.map((w, i) => `**${i + 1}.** ${w.reason}\n↳ By: ${w.moderatorTag} | ${w.active ? "Active" : "Cleared"} | <t:${Math.floor(new Date(w.createdAt).getTime() / 1000)}:R>`).join("\n\n")
     ).setTimestamp();
     await interaction.reply({ embeds: [embed] });
@@ -159,7 +159,7 @@ export const clearwarningsCommand = {
     if (!(await checkModerator(interaction))) return;
     const target = interaction.options.getUser("user", true);
     await db.update(warningsTable).set({ active: false }).where(and(eq(warningsTable.guildId, interaction.guildId!), eq(warningsTable.userId, target.id)));
-    await interaction.reply({ embeds: [successEmbed("Warnings Cleared", `All warnings cleared for ${target.tag}.`)] });
+    await interaction.reply({ embeds: [successEmbed("Warnings Cleared", `All warnings cleared for ${target.username}.`)] });
   },
 };
 
@@ -178,8 +178,8 @@ export const timeoutCommand = {
     const mins = interaction.options.getInteger("minutes", true);
     const reason = interaction.options.getString("reason") ?? "No reason provided";
     await target.timeout(mins * 60 * 1000, reason);
-    await db.insert(modLogsTable).values({ guildId: interaction.guildId!, action: "timeout", targetId: target.id, targetTag: target.user.tag, moderatorId: interaction.user.id, moderatorTag: interaction.user.tag, reason, duration: `${mins}m` });
-    await interaction.reply({ embeds: [modEmbed("Timeout", target.user.tag, interaction.user.tag, reason, { Duration: `${mins} minutes` })] });
+    await db.insert(modLogsTable).values({ guildId: interaction.guildId!, action: "timeout", targetId: target.id, targetTag: target.user.username, moderatorId: interaction.user.id, moderatorTag: interaction.user.username, reason, duration: `${mins}m` });
+    await interaction.reply({ embeds: [modEmbed("Timeout", target.user.username, interaction.user.username, reason, { Duration: `${mins} minutes` })] });
   },
 };
 
@@ -194,8 +194,8 @@ export const untimeoutCommand = {
     const target = interaction.options.getMember("user") as GuildMember;
     if (!target) { await interaction.reply({ embeds: [errorEmbed("User not found.")], ephemeral: true }); return; }
     await target.timeout(null);
-    await db.insert(modLogsTable).values({ guildId: interaction.guildId!, action: "untimeout", targetId: target.id, targetTag: target.user.tag, moderatorId: interaction.user.id, moderatorTag: interaction.user.tag });
-    await interaction.reply({ embeds: [successEmbed("Timeout Removed", `Timeout removed from ${target.user.tag}.`)] });
+    await db.insert(modLogsTable).values({ guildId: interaction.guildId!, action: "untimeout", targetId: target.id, targetTag: target.user.username, moderatorId: interaction.user.id, moderatorTag: interaction.user.username });
+    await interaction.reply({ embeds: [successEmbed("Timeout Removed", `Timeout removed from ${target.user.username}.`)] });
   },
 };
 
@@ -217,7 +217,7 @@ export const purgeCommand = {
     const messages = await channel.messages.fetch({ limit: amount });
     const toDelete = filterUser ? messages.filter((m) => m.author.id === filterUser.id) : messages;
     const deleted = await channel.bulkDelete(toDelete, true);
-    await db.insert(modLogsTable).values({ guildId: interaction.guildId!, action: "purge", targetId: channel.id, targetTag: `#${channel.name}`, moderatorId: interaction.user.id, moderatorTag: interaction.user.tag, reason: `Purged ${deleted.size} messages` });
+    await db.insert(modLogsTable).values({ guildId: interaction.guildId!, action: "purge", targetId: channel.id, targetTag: `#${channel.name}`, moderatorId: interaction.user.id, moderatorTag: interaction.user.username, reason: `Purged ${deleted.size} messages` });
     await interaction.editReply(`Deleted ${deleted.size} messages.`);
   },
 };

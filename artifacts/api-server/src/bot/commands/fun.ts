@@ -162,7 +162,7 @@ export const pollCommand = {
       .setTitle("📊 Poll")
       .setDescription(`**${question}**\n\n👍 ${opt1}\n👎 ${opt2}`)
       .setColor(0x5865f2)
-      .setFooter({ text: `Poll by ${interaction.user.tag}` })
+      .setFooter({ text: `Poll by ${interaction.user.username}` })
       .setTimestamp();
     const msg = await interaction.reply({ embeds: [embed], fetchReply: true });
     await msg.react("👍");

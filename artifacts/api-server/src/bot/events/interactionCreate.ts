@@ -268,7 +268,7 @@ export async function onInteractionCreate(interaction: Interaction): Promise<voi
           channel: btn.channel as TextChannel,
           ticket,
           closedByUserId: btn.user.id,
-          closedByTag: btn.user.tag,
+          closedByTag: btn.user.username,
           reason: "Closed via button",
         });
 

@@ -75,7 +75,7 @@ export const rankCommand = {
 
     const [row] = await db.select().from(userLevelsTable).where(and(eq(userLevelsTable.guildId, guildId), eq(userLevelsTable.userId, target.id))).limit(1);
     if (!row) {
-      await interaction.reply({ embeds: [infoEmbed("Rank", `${target.id === interaction.user.id ? "You haven't" : `${target.tag} hasn't`} sent any messages yet.`)], ephemeral: true });
+      await interaction.reply({ embeds: [infoEmbed("Rank", `${target.id === interaction.user.id ? "You haven't" : `${target.username} hasn't`} sent any messages yet.`)], ephemeral: true });
       return;
     }
 
@@ -85,7 +85,7 @@ export const rankCommand = {
     const needed = nextLevelXp - currentLevelXp;
 
     const embed = new EmbedBuilder()
-      .setTitle(`📊 Rank — ${target.tag}`)
+      .setTitle(`📊 Rank — ${target.username}`)
       .setColor(0x5865f2)
       .setThumbnail(target.displayAvatarURL())
       .addFields(

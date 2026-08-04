@@ -35,10 +35,10 @@ export const roleCommand = {
     try {
       if (sub === "add") {
         await target.roles.add(role.id);
-        await interaction.reply({ embeds: [successEmbed("Role Added", `Added <@&${role.id}> to ${target.user.tag}.`)] });
+        await interaction.reply({ embeds: [successEmbed("Role Added", `Added <@&${role.id}> to ${target.user.username}.`)] });
       } else {
         await target.roles.remove(role.id);
-        await interaction.reply({ embeds: [successEmbed("Role Removed", `Removed <@&${role.id}> from ${target.user.tag}.`)] });
+        await interaction.reply({ embeds: [successEmbed("Role Removed", `Removed <@&${role.id}> from ${target.user.username}.`)] });
       }
     } catch (err) {
       await interaction.reply({ embeds: [errorEmbed(String(err))], ephemeral: true });
@@ -116,7 +116,7 @@ export const roleAllCommand = {
         await member.roles.add(role.id);
         succeeded++;
       } catch (err: any) {
-        failed.push(`${member.user.tag}: ${err.message ?? "failed"}`);
+        failed.push(`${member.user.username}: ${err.message ?? "failed"}`);
       }
 
       processed++;
@@ -185,7 +185,7 @@ export const lockCommand = {
     const channel = interaction.channel as TextChannel;
     const reason = interaction.options.getString("reason") ?? "Channel locked by moderator";
     await channel.permissionOverwrites.edit(interaction.guild!.roles.everyone, { SendMessages: false });
-    await db.insert(modLogsTable).values({ guildId: interaction.guildId!, action: "lock", targetId: channel.id, targetTag: `#${channel.name}`, moderatorId: interaction.user.id, moderatorTag: interaction.user.tag, reason });
+    await db.insert(modLogsTable).values({ guildId: interaction.guildId!, action: "lock", targetId: channel.id, targetTag: `#${channel.name}`, moderatorId: interaction.user.id, moderatorTag: interaction.user.username, reason });
     await interaction.reply({ embeds: [successEmbed("Channel Locked", `🔒 ${channel} has been locked.\n**Reason:** ${reason}`)] });
   },
 };
@@ -199,7 +199,7 @@ export const unlockCommand = {
     if (!(await checkModerator(interaction))) return;
     const channel = interaction.channel as TextChannel;
     await channel.permissionOverwrites.edit(interaction.guild!.roles.everyone, { SendMessages: null });
-    await db.insert(modLogsTable).values({ guildId: interaction.guildId!, action: "unlock", targetId: channel.id, targetTag: `#${channel.name}`, moderatorId: interaction.user.id, moderatorTag: interaction.user.tag });
+    await db.insert(modLogsTable).values({ guildId: interaction.guildId!, action: "unlock", targetId: channel.id, targetTag: `#${channel.name}`, moderatorId: interaction.user.id, moderatorTag: interaction.user.username });
     await interaction.reply({ embeds: [successEmbed("Channel Unlocked", `🔓 ${channel} has been unlocked.`)] });
   },
 };
@@ -217,7 +217,7 @@ export const announceCommand = {
     const msg = interaction.options.getString("message", true);
     const title = interaction.options.getString("title") ?? "📢 Announcement";
     const target = (interaction.options.getChannel("channel") ?? interaction.channel) as TextChannel;
-    const embed = new EmbedBuilder().setTitle(title).setDescription(msg).setColor(0x5865f2).setTimestamp().setFooter({ text: `Posted by ${interaction.user.tag}` });
+    const embed = new EmbedBuilder().setTitle(title).setDescription(msg).setColor(0x5865f2).setTimestamp().setFooter({ text: `Posted by ${interaction.user.username}` });
     await target.send({ embeds: [embed] });
     await interaction.reply({ content: `Announcement sent to ${target}.`, ephemeral: true });
   },
@@ -236,6 +236,6 @@ export const nickCommand = {
     const nick = interaction.options.getString("nickname") ?? null;
     if (!target) { await interaction.reply({ embeds: [errorEmbed("Member not found.")], ephemeral: true }); return; }
     await target.setNickname(nick);
-    await interaction.reply({ embeds: [successEmbed("Nickname Changed", nick ? `Set ${target.user.tag}'s nickname to **${nick}**.` : `Reset ${target.user.tag}'s nickname.`)] });
+    await interaction.reply({ embeds: [successEmbed("Nickname Changed", nick ? `Set ${target.user.username}'s nickname to **${nick}**.` : `Reset ${target.user.username}'s nickname.`)] });
   },
 };

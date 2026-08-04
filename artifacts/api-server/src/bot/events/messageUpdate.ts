@@ -37,7 +37,7 @@ export async function onMessageUpdate(
       .addFields(
         {
           name: "Author",
-          value: newMessage.author ? `<@${newMessage.author.id}> (${newMessage.author.tag})` : "Unknown",
+          value: newMessage.author ? `<@${newMessage.author.id}> (${newMessage.author.username})` : "Unknown",
           inline: true,
         },
         { name: "Channel", value: `<#${newMessage.channelId}>`, inline: true },

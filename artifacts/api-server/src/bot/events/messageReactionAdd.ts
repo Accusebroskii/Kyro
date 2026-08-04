@@ -52,33 +52,33 @@ export async function onMessageReactionAdd(
       if (!config?.starboardChannelId) return;
 
       const threshold = config.starboardThreshold ?? 3;
-      if (reaction.message.partial) await reaction.message.fetch();
+      // Always use fetch return value to get the full message object
+      const msg = reaction.message.partial ? await reaction.message.fetch() : reaction.message;
       const starCount = reaction.count ?? 0;
 
       if (starCount < threshold) return;
 
-      const starChannel = reaction.message.guild.channels.cache.get(config.starboardChannelId) as TextChannel | undefined;
+      const starChannel = msg.guild?.channels.cache.get(config.starboardChannelId) as TextChannel | undefined;
       if (!starChannel) return;
 
       // Don't star messages in the starboard channel itself
-      if (reaction.message.channelId === config.starboardChannelId) return;
+      if (msg.channelId === config.starboardChannelId) return;
 
       const [existing] = await db
         .select()
         .from(starboardPostsTable)
-        .where(eq(starboardPostsTable.messageId, reaction.message.id))
+        .where(eq(starboardPostsTable.messageId, msg.id))
         .limit(1);
 
-      const msg = reaction.message;
       const author = msg.author;
       if (!author) return;
 
       const embed = new EmbedBuilder()
         .setColor(0xffd700)
-        .setAuthor({ name: author.tag, iconURL: author.displayAvatarURL() })
+        .setAuthor({ name: author.username, iconURL: author.displayAvatarURL() })
         .setDescription(msg.content || null)
         .addFields({ name: "Source", value: `[Jump to message](${msg.url})`, inline: true })
-        .setFooter({ text: `⭐ ${starCount} | #${(msg.channel as TextChannel).name ?? ""}` })
+        .setFooter({ text: `⭐ ${starCount} | #${"name" in msg.channel ? (msg.channel as TextChannel).name : ""}` })
         .setTimestamp(msg.createdAt);
 
       if (msg.attachments.size > 0) {
@@ -91,13 +91,13 @@ export async function onMessageReactionAdd(
         try {
           const sbMsg = await starChannel.messages.fetch(existing.starboardMessageId);
           const updatedEmbed = EmbedBuilder.from(sbMsg.embeds[0]!).setFooter({
-            text: `⭐ ${starCount} | #${(msg.channel as TextChannel).name ?? ""}`,
+            text: `⭐ ${starCount} | #${"name" in msg.channel ? (msg.channel as TextChannel).name : ""}`,
           });
           await sbMsg.edit({ embeds: [updatedEmbed] });
           await db
             .update(starboardPostsTable)
             .set({ starCount })
-            .where(eq(starboardPostsTable.messageId, reaction.message.id));
+            .where(eq(starboardPostsTable.messageId, msg.id));
         } catch {
           // Message may have been deleted
         }
@@ -106,7 +106,7 @@ export async function onMessageReactionAdd(
         const sbMsg = await starChannel.send({ embeds: [embed] });
         await db.insert(starboardPostsTable).values({
           guildId,
-          messageId: reaction.message.id,
+          messageId: msg.id,
           starboardMessageId: sbMsg.id,
           starCount,
         });

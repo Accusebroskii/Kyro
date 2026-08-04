@@ -14,7 +14,7 @@ export async function onMessageDelete(
   if (message.content && message.author) {
     snipeCache.set(message.channelId, {
       content: message.content.slice(0, 2000),
-      authorTag: message.author.tag,
+      authorTag: message.author.username,
       authorAvatar: message.author.displayAvatarURL(),
       timestamp: new Date(),
     });
@@ -44,7 +44,7 @@ export async function onMessageDelete(
       .addFields(
         {
           name: "Author",
-          value: message.author ? `<@${message.author.id}> (${message.author.tag})` : "Unknown",
+          value: message.author ? `<@${message.author.id}> (${message.author.username})` : "Unknown",
           inline: true,
         },
         { name: "Channel", value: `<#${message.channelId}>`, inline: true },

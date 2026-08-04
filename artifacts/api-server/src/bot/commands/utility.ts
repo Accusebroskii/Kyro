@@ -42,10 +42,10 @@ export const unbanCommand = {
         targetId: userId,
         targetTag: ban.user.tag,
         moderatorId: interaction.user.id,
-        moderatorTag: interaction.user.tag,
+        moderatorTag: interaction.user.username,
         reason,
       });
-      await interaction.reply({ embeds: [modEmbed("Unban", ban.user.tag, interaction.user.tag, reason)] });
+      await interaction.reply({ embeds: [modEmbed("Unban", ban.user.tag, interaction.user.username, reason)] });
     } catch (err) {
       await interaction.reply({ embeds: [errorEmbed(`Could not unban: ${String(err)}`)], ephemeral: true });
     }
@@ -71,13 +71,13 @@ export const modlogsCommand = {
 
     if (logs.length === 0) {
       await interaction.reply({
-        embeds: [infoEmbed(`📋 Mod Logs — ${target.tag}`, "No moderation history found for this user.")],
+        embeds: [infoEmbed(`📋 Mod Logs — ${target.username}`, "No moderation history found for this user.")],
       });
       return;
     }
 
     const embed = new EmbedBuilder()
-      .setTitle(`📋 Mod Logs — ${target.tag}`)
+      .setTitle(`📋 Mod Logs — ${target.username}`)
       .setColor(0xff6b35)
       .setThumbnail(target.displayAvatarURL())
       .setDescription(
@@ -150,7 +150,7 @@ export const moveCommand = {
     try {
       await target.voice.setChannel(channel.id);
       await interaction.reply({
-        embeds: [successEmbed("Moved", `${target.user.tag} has been moved to <#${channel.id}>.`)],
+        embeds: [successEmbed("Moved", `${target.user.username} has been moved to <#${channel.id}>.`)],
       });
     } catch (err) {
       await interaction.reply({ embeds: [errorEmbed(`Could not move user: ${String(err)}`)], ephemeral: true });
@@ -193,7 +193,7 @@ export const suggestCommand = {
       .setTitle("💡 New Suggestion")
       .setDescription(suggestion)
       .setColor(0x5865f2)
-      .setAuthor({ name: interaction.user.tag, iconURL: interaction.user.displayAvatarURL() })
+      .setAuthor({ name: interaction.user.username, iconURL: interaction.user.displayAvatarURL() })
       .setFooter({ text: `User ID: ${interaction.user.id}` })
       .setTimestamp();
     const msg = await channel.send({ embeds: [embed] });

@@ -24,7 +24,7 @@ export async function onGuildMemberAdd(member: GuildMember): Promise<void> {
           .setColor(0x57f287)
           .setThumbnail(member.user.displayAvatarURL())
           .addFields(
-            { name: "User", value: `<@${member.id}> (${member.user.tag})`, inline: true },
+            { name: "User", value: `<@${member.id}> (${member.user.username})`, inline: true },
             { name: "Account Created", value: `<t:${Math.floor(member.user.createdTimestamp / 1000)}:R>`, inline: true },
             { name: "Member Count", value: String(member.guild.memberCount), inline: true },
           )
