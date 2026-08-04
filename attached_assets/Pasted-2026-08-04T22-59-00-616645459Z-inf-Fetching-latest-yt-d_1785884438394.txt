@@ -1,0 +1,40 @@
+2026-08-04T22:59:00.616645459Z [inf]  Fetching latest yt-dlp...
+2026-08-04T22:59:00.653922610Z [inf]  Starting Container
+2026-08-04T22:59:01.075835724Z [inf]  yt-dlp updated: 2026.07.04
+2026-08-04T22:59:01.364792488Z [inf]  Server listening
+2026-08-04T22:59:01.364796848Z [err]  (node:1) Warning: SECURITY WARNING: The SSL modes 'prefer', 'require', and 'verify-ca' are treated as aliases for 'verify-full'.
+2026-08-04T22:59:01.364800848Z [err]  In the next major version (pg-connection-string v3.0.0 and pg v9.0.0), these modes will adopt standard libpq semantics, which have weaker security guarantees.
+2026-08-04T22:59:01.364808158Z [err]  
+2026-08-04T22:59:01.364811958Z [err]  To prepare for this change:
+2026-08-04T22:59:01.364815288Z [err]  - If you want the current behavior, explicitly use 'sslmode=verify-full'
+2026-08-04T22:59:01.364819008Z [err]  - If you want libpq compatibility now, use 'uselibpqcompat=true&sslmode=require'
+2026-08-04T22:59:01.364822407Z [err]  
+2026-08-04T22:59:01.364826357Z [err]  See https://www.postgresql.org/docs/current/libpq-ssl.html for libpq SSL mode definitions.
+2026-08-04T22:59:01.364829687Z [err]  (Use `node --trace-warnings ...` to show where the warning was created)
+2026-08-04T22:59:01.968228638Z [inf]  Database tables created/verified
+2026-08-04T22:59:02.615808808Z [inf]  yt-dlp is available
+2026-08-04T22:59:03.218583416Z [inf]  Discord bot logged in
+2026-08-04T22:59:03.316077912Z [inf]  Bot is ready
+2026-08-04T22:59:03.377183741Z [inf]  Loaded commands: [
+2026-08-04T22:59:03.377187921Z [inf]    'ban',        'kick',         'mute',          'unmute',
+2026-08-04T22:59:03.377191191Z [inf]    'warn',       'warnings',     'clearwarnings', 'timeout',
+2026-08-04T22:59:03.377194521Z [inf]    'untimeout',  'purge',        'unban',         'modlogs',
+2026-08-04T22:59:03.377197241Z [inf]    'role',       'role-all',     'slowmode',      'lock',
+2026-08-04T22:59:03.377200251Z [inf]    'unlock',     'announce',     'nick',          'snipe',
+2026-08-04T22:59:03.377202961Z [inf]    'move',       'suggest',      'remindme',      'setup',
+2026-08-04T22:59:03.377205821Z [inf]    'ticket',     'modmail',      'bugreport',     'playerreport',
+2026-08-04T22:59:03.377208491Z [inf]    'support',    'play',         'pause',         'resume',
+2026-08-04T22:59:03.377211671Z [inf]    'skip',       'stop',         'queue',         'nowplaying',
+2026-08-04T22:59:03.377214271Z [inf]    'volume',     'loop',         'shuffle',       'remove',
+2026-08-04T22:59:03.377217351Z [inf]    'disconnect', 'playlist',     '8ball',         'coinflip',
+2026-08-04T22:59:03.377220121Z [inf]    'dice',       'joke',         'poll',          'serverinfo',
+2026-08-04T22:59:03.377223251Z [inf]    'userinfo',   'ship',         'rps',           'wyr',
+2026-08-04T22:59:03.377225901Z [inf]    'hack',       'roast',        'pp',            'meme',
+2026-08-04T22:59:03.377228471Z [inf]    'trivia',     'afk',          'rank',          'leaderboard',
+2026-08-04T22:59:03.377231091Z [inf]    'giveaway',   'reactionrole', 'backup',        'createroles',
+2026-08-04T22:59:03.377233901Z [inf]    'template',   'embed',        'help',          'invite',
+2026-08-04T22:59:03.377236241Z [inf]    'security',   'automod',      'restart',       'ping',
+2026-08-04T22:59:03.377239061Z [inf]    'botinfo',    'bug',          'say',           'dm',
+2026-08-04T22:59:03.377241951Z [inf]    'setstatus',  'globalban',    'botname',       'botavatar',
+2026-08-04T22:59:03.377947791Z [inf]    'broadcast',  'guild'
+2026-08-04T22:59:03.377951791Z [inf]  ]
