@@ -147,6 +147,11 @@ export async function startBot(): Promise<void> {
         mod_role_id TEXT, admin_role_id TEXT, owner_id TEXT, antispam_enabled BOOLEAN DEFAULT false,
         anti_raid_enabled BOOLEAN DEFAULT false, automod_enabled BOOLEAN DEFAULT false,
         join_to_create_channel_id TEXT, join_to_create_category_id TEXT, max_warnings INTEGER DEFAULT 3,
+        verification_enabled BOOLEAN DEFAULT false, verification_method TEXT,
+        verification_channel_id TEXT, verification_message_id TEXT,
+        unverified_role_id TEXT, verified_role_id TEXT, verification_word TEXT,
+        suggestions_channel_id TEXT, starboard_channel_id TEXT, starboard_threshold INTEGER DEFAULT 3,
+        boost_message_enabled BOOLEAN DEFAULT false, boost_message TEXT, boost_channel_id TEXT,
         created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(), updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
       );
       CREATE TABLE IF NOT EXISTS tickets (
@@ -157,8 +162,20 @@ export async function startBot(): Promise<void> {
         closed_at TIMESTAMP WITH TIME ZONE
       );
       CREATE TABLE IF NOT EXISTS ticket_topics (
-        id SERIAL PRIMARY KEY, guild_id TEXT NOT NULL, label TEXT NOT NULL,
-        description TEXT, emoji TEXT DEFAULT '📩', created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+        id SERIAL PRIMARY KEY, guild_id TEXT NOT NULL,
+        panel_name TEXT NOT NULL DEFAULT 'default',
+        label TEXT NOT NULL, description TEXT, emoji TEXT DEFAULT '📩',
+        created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+      );
+      CREATE TABLE IF NOT EXISTS ticket_panels (
+        id SERIAL PRIMARY KEY, guild_id TEXT NOT NULL, panel_name TEXT NOT NULL,
+        title TEXT NOT NULL, description TEXT, channel_id TEXT,
+        created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+      );
+      CREATE TABLE IF NOT EXISTS panel_drafts (
+        id SERIAL PRIMARY KEY, session_id TEXT NOT NULL UNIQUE,
+        guild_id TEXT NOT NULL, user_id TEXT NOT NULL,
+        data JSONB NOT NULL, updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
       );
       CREATE TABLE IF NOT EXISTS mod_logs (
         id SERIAL PRIMARY KEY, guild_id TEXT NOT NULL, target_id TEXT NOT NULL,
@@ -181,26 +198,39 @@ export async function startBot(): Promise<void> {
         id SERIAL PRIMARY KEY, guild_id TEXT NOT NULL, role_id TEXT NOT NULL, role_name TEXT NOT NULL,
         created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
       );
+      CREATE TABLE IF NOT EXISTS reaction_roles (
+        id SERIAL PRIMARY KEY, guild_id TEXT NOT NULL, channel_id TEXT NOT NULL,
+        message_id TEXT NOT NULL, emoji_key TEXT NOT NULL, emoji_display TEXT NOT NULL,
+        role_id TEXT NOT NULL, created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+      );
       CREATE TABLE IF NOT EXISTS music_playlists (
         id SERIAL PRIMARY KEY, guild_id TEXT NOT NULL, name TEXT NOT NULL,
         created_by TEXT NOT NULL, created_by_tag TEXT NOT NULL, created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
       );
       CREATE TABLE IF NOT EXISTS music_playlist_songs (
-      CREATE TABLE IF NOT EXISTS server_backups (
-        id SERIAL PRIMARY KEY,
-        guild_id TEXT NOT NULL,
-        created_by TEXT NOT NULL,
-        data JSONB NOT NULL,
-        created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
-      );
         id SERIAL PRIMARY KEY, playlist_id INTEGER NOT NULL, title TEXT NOT NULL,
         url TEXT NOT NULL, duration TEXT NOT NULL, thumbnail TEXT NOT NULL
+      );
+      CREATE TABLE IF NOT EXISTS server_backups (
+        id SERIAL PRIMARY KEY, guild_id TEXT NOT NULL, created_by TEXT NOT NULL,
+        data JSONB NOT NULL, created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
       );
       CREATE TABLE IF NOT EXISTS reports (
         id SERIAL PRIMARY KEY, guild_id TEXT NOT NULL, reporter_id TEXT NOT NULL,
         reporter_tag TEXT NOT NULL, target_id TEXT NOT NULL, target_tag TEXT NOT NULL,
         reason TEXT, message_id TEXT, channel_id TEXT, status TEXT NOT NULL DEFAULT 'open',
         created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+      );
+      CREATE TABLE IF NOT EXISTS giveaways (
+        id SERIAL PRIMARY KEY, guild_id TEXT NOT NULL, channel_id TEXT NOT NULL,
+        message_id TEXT, prize TEXT NOT NULL, winners_count INTEGER NOT NULL DEFAULT 1,
+        hosted_by TEXT NOT NULL, ends_at TIMESTAMP WITH TIME ZONE NOT NULL,
+        ended BOOLEAN NOT NULL DEFAULT false, winner_ids TEXT[],
+        created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+      );
+      CREATE TABLE IF NOT EXISTS giveaway_entries (
+        id SERIAL PRIMARY KEY, giveaway_id INTEGER NOT NULL, user_id TEXT NOT NULL,
+        entered_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
       );
       CREATE TABLE IF NOT EXISTS reminders (
         id SERIAL PRIMARY KEY, guild_id TEXT NOT NULL, user_id TEXT NOT NULL,
@@ -222,18 +252,23 @@ export async function startBot(): Promise<void> {
         id SERIAL PRIMARY KEY, guild_id TEXT NOT NULL, user_id TEXT NOT NULL,
         reason TEXT, created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
       );
-      CREATE TABLE IF NOT EXISTS levels (
+      CREATE TABLE IF NOT EXISTS user_levels (
         id SERIAL PRIMARY KEY, guild_id TEXT NOT NULL, user_id TEXT NOT NULL,
         xp INTEGER NOT NULL DEFAULT 0, level INTEGER NOT NULL DEFAULT 0,
-        created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+        last_message_at TIMESTAMP WITH TIME ZONE,
         UNIQUE(guild_id, user_id)
       );
+      CREATE TABLE IF NOT EXISTS level_role_rewards (
+        id SERIAL PRIMARY KEY, guild_id TEXT NOT NULL,
+        level INTEGER NOT NULL, role_id TEXT NOT NULL
+      );
     `);
-    /* Add new columns to guild_config that may not exist on older deployments */
+    /* Patch columns that may be missing on existing deployments */
     await db.execute(sql`
       ALTER TABLE guild_config ADD COLUMN IF NOT EXISTS verification_enabled BOOLEAN DEFAULT false;
       ALTER TABLE guild_config ADD COLUMN IF NOT EXISTS verification_method TEXT;
       ALTER TABLE guild_config ADD COLUMN IF NOT EXISTS verification_channel_id TEXT;
+      ALTER TABLE guild_config ADD COLUMN IF NOT EXISTS verification_message_id TEXT;
       ALTER TABLE guild_config ADD COLUMN IF NOT EXISTS unverified_role_id TEXT;
       ALTER TABLE guild_config ADD COLUMN IF NOT EXISTS verified_role_id TEXT;
       ALTER TABLE guild_config ADD COLUMN IF NOT EXISTS verification_word TEXT;
@@ -243,6 +278,7 @@ export async function startBot(): Promise<void> {
       ALTER TABLE guild_config ADD COLUMN IF NOT EXISTS boost_message_enabled BOOLEAN DEFAULT false;
       ALTER TABLE guild_config ADD COLUMN IF NOT EXISTS boost_message TEXT;
       ALTER TABLE guild_config ADD COLUMN IF NOT EXISTS boost_channel_id TEXT;
+      ALTER TABLE ticket_topics ADD COLUMN IF NOT EXISTS panel_name TEXT NOT NULL DEFAULT 'default';
     `);
     logger.info("Database tables created/verified");
   } catch (err) {
