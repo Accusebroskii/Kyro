@@ -4,7 +4,7 @@ import { getAllCommands } from "../artifacts/api-server/src/bot/commands/index.j
 const token = process.env.DISCORD_TOKEN!;
 const clientId = process.env.DISCORD_CLIENT_ID!;
 
-const guildId = "1515345672583385160";
+const guildId = "1452849638741639201";
 
 const commands = getAllCommands().map(command => command.data.toJSON());
 
