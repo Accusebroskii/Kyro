@@ -56,11 +56,13 @@ export const botinfoCommand = {
     .setDescription("Shows information about the bot"),
   async execute(interaction: ChatInputCommandInteraction) {
     const client = interaction.client;
-    const uptime = process.uptime();
-    const d = Math.floor(uptime / 86400);
-    const h = Math.floor((uptime % 86400) / 3600);
-    const m = Math.floor((uptime % 3600) / 60);
-    const uptimeStr = `${d}d ${h}h ${m}m`;
+    // client.uptime is ms since the bot logged in (resets on restart); process.uptime() does not
+    const uptimeSec = Math.floor((client.uptime ?? 0) / 1000);
+    const d = Math.floor(uptimeSec / 86400);
+    const h = Math.floor((uptimeSec % 86400) / 3600);
+    const m = Math.floor((uptimeSec % 3600) / 60);
+    const s = uptimeSec % 60;
+    const uptimeStr = `${d}d ${h}h ${m}m ${s}s`;
 
     await interaction.reply({
       embeds: [
@@ -69,12 +71,13 @@ export const botinfoCommand = {
           .setColor(0x9b59b6)
           .setThumbnail(client.user?.displayAvatarURL() ?? "")
           .addFields(
-            { name: "👑 Owner", value: "<@1375707337104429088> (accusebroski_)", inline: true },
-            { name: "\u200b", value: "\u200b", inline: true },
-            { name: "👥 Cached Users", value: `${client.users.cache.size}`, inline: true },
+            { name: "👑 Owner", value: "<@1375707337104429088> (accusebroski_)", inline: false },
             { name: "🌐 Servers", value: `${client.guilds.cache.size}`, inline: true },
+            { name: "👥 Cached Users", value: `${client.users.cache.size}`, inline: true },
+            { name: "\u200b", value: "\u200b", inline: true },
             { name: "🏓 WS Ping", value: `${Math.max(0, client.ws.ping)}ms`, inline: true },
             { name: "⏱️ Uptime", value: uptimeStr, inline: true },
+            { name: "\u200b", value: "\u200b", inline: true },
             { name: "📦 Node.js", value: process.version, inline: true },
             { name: "💾 Memory", value: `${Math.round(process.memoryUsage().heapUsed / 1024 / 1024)}MB`, inline: true },
           )
