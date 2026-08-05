@@ -216,6 +216,7 @@ const ALL_COMMANDS: Command[] = [
   botnameCommand,
   botavatarCommand,
   broadcastCommand,
+  guildsCommand,
   guildCommand,
 ];
 
