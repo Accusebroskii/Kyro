@@ -66,7 +66,7 @@ export const botinfoCommand = {
       embeds: [
         new EmbedBuilder()
           .setTitle("🤖 Bot Information")
-          .setColor(0x5865f2)
+          .setColor(0x9b59b6)
           .setThumbnail(client.user?.displayAvatarURL() ?? "")
           .addFields(
             { name: "👑 Owner", value: "<@1375707337104429088> (accusebroski_)", inline: true },
