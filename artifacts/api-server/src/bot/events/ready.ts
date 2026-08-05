@@ -9,7 +9,12 @@ import { scheduleActiveGiveaways } from "../commands/giveaway.js";
 // (set elsewhere, e.g. owner.ts) stays visible instead of being overwritten
 // every 5 seconds.
 let bugModeActive = false;
+let customStatusActive = false;
 let botClient: Client | null = null;
+
+export function setCustomStatus(active: boolean): void {
+  customStatusActive = active;
+}
 
 export function setBugMode(active: boolean): void {
   bugModeActive = active;
@@ -59,7 +64,7 @@ export async function onReady(client: Client): Promise<void> {
   const updateActivity = () => {
     // Skip rotating while bug mode is active so the "Fixing Bugs 😭" status
     // set by /bug isn't immediately overwritten.
-    if (bugModeActive) return;
+    if (bugModeActive || customStatusActive) return;
 
     if (statuses[statusIndex].text.endsWith("servers")) {
       statuses[statusIndex].text = `${client.guilds.cache.size} servers`;

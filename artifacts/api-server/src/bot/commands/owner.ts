@@ -8,7 +8,7 @@ import {
   EmbedBuilder,
   PermissionFlagsBits,
 } from "discord.js";
-import { setBugMode, isBugModeActive } from "../events/ready.js";
+import { setBugMode, isBugModeActive, setCustomStatus } from "../events/ready.js";
 import { successEmbed, errorEmbed, infoEmbed } from "../lib/embeds.js";
 import { logger } from "../../lib/logger.js";
 
@@ -210,7 +210,7 @@ export const setstatusCommand = {
     const type = interaction.options.getString("type") ?? "watching";
 
     if (!text) {
-      // Reset to rotation — trigger by temporarily setting then the ready rotation takes over on next cycle
+      setCustomStatus(false);
       interaction.client.user?.setPresence({ activities: [], status: "online" });
       await interaction.reply({ content: "🔄 Status reset to rotation.", flags: MessageFlags.Ephemeral });
       return;
@@ -223,6 +223,7 @@ export const setstatusCommand = {
       competing: ActivityType.Competing,
     };
 
+    setCustomStatus(true);
     interaction.client.user?.setActivity(text, { type: typeMap[type] ?? ActivityType.Watching });
     await interaction.reply({
       embeds: [successEmbed("Status Updated", `Now showing: **${type.charAt(0).toUpperCase() + type.slice(1)} ${text}**`)],
