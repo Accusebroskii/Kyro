@@ -1,40 +1,37 @@
-import { REST, Routes } from "discord.js";
 import { getAllCommands } from "../artifacts/api-server/src/bot/commands/index.js";
 
 const token = process.env.DISCORD_TOKEN!;
 const clientId = process.env.DISCORD_CLIENT_ID!;
 
-const guildIds = [
-  "1515345672583385160",
-  "1452849638741639201",
-];
-
 const commands = getAllCommands().map(command => command.data.toJSON());
 
-console.log(`Registering ${commands.length} commands to ${guildIds.length} guild(s)...`);
+console.log(`Registering ${commands.length} commands globally...`);
 
-const rest = new REST({
-  version: "10",
-  timeout: 30000,
-}).setToken(token);
+async function deploy() {
+  console.log("Updating global application commands...");
 
-try {
-  for (const guildId of guildIds) {
-    console.log(`Updating guild ${guildId}...`);
+  const response = await fetch(
+    `https://discord.com/api/v10/applications/${clientId}/commands`,
+    {
+      method: "PUT",
+      headers: {
+        Authorization: `Bot ${token}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(commands),
+    }
+  );
 
-    await rest.put(
-      Routes.applicationGuildCommands(clientId, guildId),
-      {
-        body: commands,
-      }
-    );
+  const data = await response.text();
 
-    console.log(`✅ Updated ${guildId}`);
+  console.log(`Discord response: ${response.status}`);
+
+  if (!response.ok) {
+    console.error(data);
+    process.exit(1);
   }
 
-  console.log("🎉 All guild commands updated!");
-} catch (error) {
-  console.error("Failed to register commands:");
-  console.error(error);
-  process.exit(1);
+  console.log(`✅ Successfully registered ${commands.length} global commands!`);
 }
+
+deploy().catch(console.error);

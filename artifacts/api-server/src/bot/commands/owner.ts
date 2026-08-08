@@ -251,10 +251,10 @@ export const guildsCommand = {
     );
 
     const lines = guilds.map(
-      (g, i) => `\`${String(i + 1).padStart(2, "0")}\` **${g.name}** — ${g.memberCount?.toLocaleString() ?? "?"} members \`${g.id}\``,
+      (g, i) =>
+        `\`${String(i + 1).padStart(2, "0")}\` **${g.name}** — ${g.memberCount?.toLocaleString() ?? "?"} members \`${g.id}\``,
     );
 
-    // Chunk into pages of 20
     const chunks: string[] = [];
     for (let i = 0; i < lines.length; i += 20) {
       chunks.push(lines.slice(i, i + 20).join("\n"));
@@ -267,7 +267,6 @@ export const guildsCommand = {
         .setColor(0x5865f2),
     );
 
-    // Discord allows up to 10 embeds per message
     await interaction.editReply({ embeds: embeds.slice(0, 10) });
   },
 };

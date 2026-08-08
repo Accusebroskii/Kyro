@@ -91,11 +91,11 @@ import {
   sayCommand,
   dmCommand,
   setstatusCommand,
-  guildsCommand,
   globalbanCommand,
   botnameCommand,
   botavatarCommand,
   broadcastCommand,
+  guildsCommand,
 } from "./owner.js";
 
 export interface Command {
