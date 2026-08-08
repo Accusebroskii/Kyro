@@ -99,7 +99,7 @@ try {
   const handledByCounting = await handleCounting(message, guildId);
   if (handledByCounting) return;
 } catch (err) {
-  logger.error({ err }, "Error in counting messageCreate handler");
+  logger.error({ err, errorMessage: err instanceof Error ? err.message : String(err), errorStack: err instanceof Error ? err.stack : undefined }, "Error in counting messageCreate handler");
 }
 
 
