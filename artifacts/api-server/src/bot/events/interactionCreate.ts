@@ -68,37 +68,53 @@ export async function onInteractionCreate(interaction: Interaction): Promise<voi
     // SLASH COMMANDS
     // =========================
     if (interaction.isChatInputCommand()) {
-      const cmd = getCommand(interaction.commandName);
-      if (!cmd) return;
+  const cmd = getCommand(interaction.commandName);
+  if (!cmd) return;
 
-      try {
-        await cmd.execute(interaction as ChatInputCommandInteraction);
-      } catch (err) {
-        logger.error({
-      command: interaction.commandName,
-      errorMessage: err instanceof Error ? err.message : String(err),
-      errorStack: err instanceof Error ? err.stack : undefined,
-      errorName: err instanceof Error ? err.name : typeof err,
-    }, "Slash command crashed");
+  try {
+    await cmd.execute(interaction as ChatInputCommandInteraction);
+  } catch (err) {
+    const error = err instanceof Error ? err : new Error(String(err));
 
-        const payload = {
-          content: "❌ Error executing command.",
-          flags: 64, // EPHEMERAL (fix deprecated usage)
-        };
+    logger.error(
+      {
+        command: interaction.commandName,
+        errorMessage: error.message,
+        errorName: error.name,
+        errorStack: error.stack,
+      },
+      "Slash command crashed"
+    );
 
-        if (interaction.replied || interaction.deferred) {
-          await interaction.followUp(payload).catch(() => {});
-        } else {
-          await interaction.reply(payload).catch(() => {});
-        }
+    const payload = {
+      content: `❌ **Command failed**\\n\\`${error.message}\\``,
+      ephemeral: true,
+    };
+
+    try {
+      if (interaction.replied || interaction.deferred) {
+        await interaction.followUp(payload);
+      } else {
+        await interaction.reply(payload);
       }
-
-      return;
+    } catch (replyError) {
+      logger.error(
+        {
+          command: interaction.commandName,
+          errorMessage:
+            replyError instanceof Error
+              ? replyError.message
+              : String(replyError),
+          errorStack:
+            replyError instanceof Error ? replyError.stack : undefined,
+        },
+        "Failed to send slash command error response"
+      );
     }
+  }
 
-    // =========================
-    // STRING SELECT
-    // =========================
+  return;
+}
     if (interaction.isStringSelectMenu()) {
       const select = interaction as StringSelectMenuInteraction;
 
