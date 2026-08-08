@@ -465,6 +465,23 @@ export const setupCommand = {
       }).where(eq(guildConfigTable.guildId, guildId));
       const [cfg] = await db.select().from(guildConfigTable).where(eq(guildConfigTable.guildId, guildId)).limit(1);
       await interaction.reply({ embeds: [successEmbed("Starboard Configured", `Channel: ${cfg?.starboardChannelId ? `<#${cfg.starboardChannelId}>` : "Not set"}\nThreshold: **${cfg?.starboardThreshold ?? 3} ⭐** to get on the board`)] });
+      } else if (sub === "counting") {
+        const channel = interaction.options.getChannel("channel", true);
+
+        await db.update(guildConfigTable).set({
+          countingChannelId: channel.id,
+          countingCurrent: 0,
+          countingHighScore: 0,
+          countingLastUserId: null,
+        }).where(eq(guildConfigTable.guildId, guildId));
+
+        await interaction.reply({
+          embeds: [successEmbed(
+            "Counting Configured",
+            `Counting channel set to <#${channel.id}>.\n\nThe counter has been reset to **0** and is ready to start.`
+          )],
+        });
+
     }
   },
 };
