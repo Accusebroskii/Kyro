@@ -4,10 +4,10 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "dev": "export NODE_ENV=development && pnpm run build && pnpm run start",
-    "build": "node ./build.mjs",
-    "start": "node --enable-source-maps ./dist/index.mjs",
-    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "dev": "export NODE_ENV=development && pnpm --filter @workspace/api-server run build && pnpm --filter @workspace/api-server run start",
+    "build": "pnpm --filter @workspace/api-server run build",
+    "start": "pnpm --filter @workspace/api-server run start",
+    "typecheck": "pnpm --filter @workspace/api-server run typecheck",
     "deploy": "npx tsx src/deploy-commands.ts"
   },
   "dependencies": {
