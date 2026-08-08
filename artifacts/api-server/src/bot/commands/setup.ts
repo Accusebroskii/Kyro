@@ -131,6 +131,16 @@ export const setupCommand = {
         .addIntegerOption((o) => o.setName("threshold").setDescription("⭐ reactions needed to get on starboard (default: 3)").setMinValue(1).setMaxValue(50))
         .addBooleanOption((o) => o.setName("disable").setDescription("Disable the starboard")),
     )
+    .addSubcommand((s) =>
+      s.setName("counting")
+        .setDescription("Set up the counting channel")
+        .addChannelOption((o) =>
+          o.setName("channel")
+            .setDescription("Channel where members will count")
+            .setRequired(true)
+            .addChannelTypes(ChannelType.GuildText)
+        )
+    )
     .setDefaultMemberPermissions(PermissionFlagsBits.Administrator),
 
   async execute(interaction: ChatInputCommandInteraction) {
