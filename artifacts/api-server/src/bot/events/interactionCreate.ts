@@ -74,7 +74,12 @@ export async function onInteractionCreate(interaction: Interaction): Promise<voi
       try {
         await cmd.execute(interaction as ChatInputCommandInteraction);
       } catch (err) {
-        logger.error({ err, command: interaction.commandName, errorMessage: err instanceof Error ? err.message : String(err), errorStack: err instanceof Error ? err.stack : undefined }, "Slash command crashed");
+        logger.error({
+      command: interaction.commandName,
+      errorMessage: err instanceof Error ? err.message : String(err),
+      errorStack: err instanceof Error ? err.stack : undefined,
+      errorName: err instanceof Error ? err.name : typeof err,
+    }, "Slash command crashed");
 
         const payload = {
           content: "❌ Error executing command.",
