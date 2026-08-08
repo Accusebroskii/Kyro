@@ -87,7 +87,7 @@ export async function onInteractionCreate(interaction: Interaction): Promise<voi
     );
 
     const payload = {
-      content: `❌ **Command failed**\\n\\`${error.message}\\``,
+      content: `❌ **Command failed**\n\`${error.message}\``,
       ephemeral: true,
     };
 
