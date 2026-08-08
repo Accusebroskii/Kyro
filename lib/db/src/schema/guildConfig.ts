@@ -34,6 +34,12 @@ export const guildConfigTable = pgTable("guild_config", {
   unverifiedRoleId: text("unverified_role_id"),
   verifiedRoleId: text("verified_role_id"),
   verificationWord: text("verification_word"),
+  // Counting system
+  countingChannelId: text("counting_channel_id"),
+  countingCurrent: integer("counting_current").notNull().default(0),
+  countingHighScore: integer("counting_high_score").notNull().default(0),
+  countingLastUserId: text("counting_last_user_id"),
+
   // Suggestions system
   suggestionsChannelId: text("suggestions_channel_id"),
   // Starboard

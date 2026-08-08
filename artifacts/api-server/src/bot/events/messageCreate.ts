@@ -7,9 +7,101 @@ import { handleMessageXp } from "../commands/levels.js";
 const spamTracker = new Map<string, { count: number; lastMessage: number; warned: boolean }>();
 const KALEIGH_USER_ID = "1492136743493828790";
 
+// Counting system
+async function handleCounting(message: Message, guildId: string): Promise<boolean> {
+  const [config] = await db
+    .select()
+    .from(guildConfigTable)
+    .where(eq(guildConfigTable.guildId, guildId))
+    .limit(1);
+
+  if (!config?.countingChannelId || message.channelId !== config.countingChannelId) {
+    return false;
+  }
+
+  const content = message.content.trim();
+
+  // Only process plain whole numbers.
+  if (!/^\d+$/.test(content)) {
+    return true;
+  }
+
+  const number = Number(content);
+  const current = config.countingCurrent ?? 0;
+  const expected = current + 1;
+
+  // The same person cannot count twice consecutively.
+  if (config.countingLastUserId === message.author.id) {
+    await message.delete().catch(() => {});
+
+    if (message.channel instanceof TextChannel) {
+      const warning = await message.channel.send(
+        `❌ <@${message.author.id}> You can't count twice in a row!`
+      ).catch(() => null);
+
+      if (warning) {
+        setTimeout(() => warning.delete().catch(() => {}), 4000);
+      }
+    }
+
+    return true;
+  }
+
+  // Wrong number = reset the count.
+  if (number !== expected) {
+    await message.delete().catch(() => {});
+
+    await db
+      .update(guildConfigTable)
+      .set({
+        countingCurrent: 0,
+        countingLastUserId: null,
+        updatedAt: new Date(),
+      })
+      .where(eq(guildConfigTable.guildId, guildId));
+
+    if (message.channel instanceof TextChannel) {
+      const warning = await message.channel.send(
+        `❌ <@${message.author.id}> Wrong number! The next count starts at **1**.`
+      ).catch(() => null);
+
+      if (warning) {
+        setTimeout(() => warning.delete().catch(() => {}), 5000);
+      }
+    }
+
+    return true;
+  }
+
+  const newCount = number;
+  const highScore = Math.max(config.countingHighScore ?? 0, newCount);
+
+  await db
+    .update(guildConfigTable)
+    .set({
+      countingCurrent: newCount,
+      countingHighScore: highScore,
+      countingLastUserId: message.author.id,
+      updatedAt: new Date(),
+    })
+    .where(eq(guildConfigTable.guildId, guildId));
+
+  return true;
+}
+
+
 export async function onMessageCreate(message: Message): Promise<void> {
   if (message.author.bot || !message.guild) return;
   const guildId = message.guild.id;
+
+// Counting must run before other message handlers.
+try {
+  const handledByCounting = await handleCounting(message, guildId);
+  if (handledByCounting) return;
+} catch (err) {
+  logger.error({ err }, "Error in counting messageCreate handler");
+}
+
 
   // Kale ping
   if (message.content.toLowerCase().includes("kale")) {
