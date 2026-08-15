@@ -493,10 +493,6 @@ export const broadcastCommand = {
 
 // ─── /addlevel ────────────────────────────────────────────────────────────────
 
-function xpForLevelForOwner(level: number): number {
-  return 5 * level * level + 50 * level + 100;
-}
-
 export const addlevelCommand = {
   data: new SlashCommandBuilder()
     .setName("addlevel")
@@ -513,23 +509,23 @@ export const addlevelCommand = {
         .setDescription("Number of levels to add")
         .setRequired(true)
         .setMinValue(1)
-        .setMaxValue(1000),
+        .setMaxValue(100),
     ),
 
   async execute(interaction: ChatInputCommandInteraction) {
     if (!ownerOnly(interaction)) return;
 
-    if (!interaction.guildId) {
+    const target = interaction.options.getUser("user", true);
+    const levels = interaction.options.getInteger("levels", true);
+    const guildId = interaction.guildId;
+
+    if (!guildId) {
       await interaction.reply({
-        content: "❌ This command can only be used inside a server.",
+        embeds: [errorEmbed("This command can only be used inside a server.")],
         flags: MessageFlags.Ephemeral,
       });
       return;
     }
-
-    const target = interaction.options.getUser("user", true);
-    const levelsToAdd = interaction.options.getInteger("levels", true);
-    const guildId = interaction.guildId;
 
     try {
       const [existing] = await db
@@ -544,82 +540,64 @@ export const addlevelCommand = {
         .limit(1);
 
       const oldLevel = existing?.level ?? 0;
-      const oldXp = existing?.xp ?? 0;
-      const newLevel = oldLevel + levelsToAdd;
+      const newLevel = oldLevel + levels;
 
-      // Give the user enough XP to be at the new level.
-      const newXp = xpForLevelForOwner(newLevel);
+      // Give the user enough XP to actually be at the requested level.
+      const newXp = xpForLevel(newLevel);
 
       if (existing) {
         await db
           .update(userLevelsTable)
           .set({
-            xp: newXp,
             level: newLevel,
+            xp: newXp,
           })
           .where(eq(userLevelsTable.id, existing.id));
       } else {
         await db.insert(userLevelsTable).values({
           guildId,
           userId: target.id,
-          xp: newXp,
           level: newLevel,
-          lastMessageAt: null,
+          xp: newXp,
         });
       }
 
-      // Apply level role rewards.
-      let rolesAdded = 0;
+      // Apply any level-role rewards they have now reached.
+      const member = await interaction.guild?.members.fetch(target.id).catch(() => null);
 
-      try {
-        const member = await interaction.guild?.members.fetch(target.id);
+      if (member) {
+        const rewards = await db
+          .select()
+          .from(levelRoleRewardsTable)
+          .where(eq(levelRoleRewardsTable.guildId, guildId));
 
-        if (member) {
-          const rewards = await db
-            .select()
-            .from(levelRoleRewardsTable)
-            .where(eq(levelRoleRewardsTable.guildId, guildId));
-
-          for (const reward of rewards) {
-            if (
-              reward.level <= newLevel &&
-              !member.roles.cache.has(reward.roleId)
-            ) {
-              const added = await member.roles.add(
-                reward.roleId,
-                "Level reward granted by /addlevel",
-              ).then(() => true).catch(() => false);
-
-              if (added) rolesAdded++;
-            }
+        for (const reward of rewards) {
+          if (
+            reward.level <= newLevel &&
+            !member.roles.cache.has(reward.roleId)
+          ) {
+            await member.roles.add(reward.roleId).catch(() => {});
           }
         }
-      } catch (err) {
-        logger.warn({ err }, "Failed to apply level rewards from /addlevel");
       }
 
       await interaction.reply({
         embeds: [
           successEmbed(
             "Level Added",
-            `🎉 Added **${levelsToAdd} level${levelsToAdd === 1 ? "" : "s"}** to <@${target.id}>.\n\n` +
-            `📊 **Previous Level:** ${oldLevel}\n` +
-            `🚀 **New Level:** ${newLevel}\n` +
-            `✨ **XP:** ${newXp}` +
-            (rolesAdded > 0
-              ? `\n🎁 **Roles Added:** ${rolesAdded}`
-              : ""),
+            `Added **${levels} level${levels === 1 ? "" : "s"}** to <@${target.id}>.\n\n` +
+            `**Previous Level:** ${oldLevel}\n` +
+            `**New Level:** ${newLevel}\n` +
+            `**XP:** ${newXp}`,
           ),
         ],
         flags: MessageFlags.Ephemeral,
-      );
-    } catch (err) {
-      logger.error({ err }, "Error in /addlevel command");
+      });
+    } catch (error) {
+      logger.error({ error, command: "addlevel" }, "Failed to add levels");
 
       await interaction.reply({
-        embeds: [
-          errorEmbed("Failed to add levels. Check the bot/database logs."),
-        ],
+        embeds: [errorEmbed("Failed to add levels. Check the bot logs.")],
         flags: MessageFlags.Ephemeral,
       });
     }
