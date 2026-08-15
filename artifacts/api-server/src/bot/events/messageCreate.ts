@@ -99,7 +99,7 @@ try {
   const handledByCounting = await handleCounting(message, guildId);
   if (handledByCounting) return;
 } catch (err) {
-  logger.error({ err, errorMessage: err instanceof Error ? err.message : String(err), errorStack: err instanceof Error ? err.stack : undefined }, "Error in counting messageCreate handler");
+  logger.error("Error in counting messageCreate handler: " + (err instanceof Error ? err.stack || err.message : String(err)));
 }
 
 
@@ -238,6 +238,6 @@ try {
       }
     }
   } catch (err) {
-    logger.error({ err }, "Error in automod messageCreate");
+    logger.error("Error in automod messageCreate: " + (err instanceof Error ? err.stack || err.message : String(err)));
   }
 }
