@@ -219,6 +219,7 @@ const ALL_COMMANDS: Command[] = [
   broadcastCommand,
   guildsCommand,
   guildCommand,
+  addlevelCommand,
 ];
 
 const commandMap = new Map<string, Command>(
