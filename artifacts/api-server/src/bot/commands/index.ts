@@ -96,6 +96,7 @@ import {
   botavatarCommand,
   broadcastCommand,
   guildsCommand,
+  addlevelCommand,
 } from "./owner.js";
 
 export interface Command {

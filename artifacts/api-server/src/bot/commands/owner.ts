@@ -11,6 +11,9 @@ import {
 import { setBugMode, isBugModeActive, setCustomStatus } from "../events/ready.js";
 import { successEmbed, errorEmbed, infoEmbed } from "../lib/embeds.js";
 import { logger } from "../../lib/logger.js";
+import { db, userLevelsTable, levelRoleRewardsTable } from "@workspace/db";
+import { eq, and } from "drizzle-orm";
+import { xpForLevel } from "./levels.js";
 
 const OWNER_ID = "1375707337104429088";
 
@@ -486,5 +489,137 @@ export const broadcastCommand = {
           .setTimestamp(),
       ],
     });
+  },
+};
+
+// ─── /addlevel ────────────────────────────────────────────────────────────────
+
+export const addlevelCommand = {
+  data: new SlashCommandBuilder()
+    .setName("addlevel")
+    .setDescription("Add levels to a user (owner only)")
+    .addUserOption((o) =>
+      o
+        .setName("user")
+        .setDescription("User to give levels to")
+        .setRequired(true),
+    )
+    .addIntegerOption((o) =>
+      o
+        .setName("levels")
+        .setDescription("Number of levels to add")
+        .setRequired(true)
+        .setMinValue(1)
+        .setMaxValue(1000),
+    ),
+
+  async execute(interaction: ChatInputCommandInteraction) {
+    if (!ownerOnly(interaction)) return;
+
+    if (!interaction.guildId) {
+      await interaction.reply({
+        content: "❌ This command can only be used inside a server.",
+        flags: MessageFlags.Ephemeral,
+      });
+      return;
+    }
+
+    const target = interaction.options.getUser("user", true);
+    const levelsToAdd = interaction.options.getInteger("levels", true);
+    const guildId = interaction.guildId;
+
+    try {
+      const [existing] = await db
+        .select()
+        .from(userLevelsTable)
+        .where(
+          and(
+            eq(userLevelsTable.guildId, guildId),
+            eq(userLevelsTable.userId, target.id),
+          ),
+        )
+        .limit(1);
+
+      const oldLevel = existing?.level ?? 0;
+      const oldXp = existing?.xp ?? 0;
+      const newLevel = oldLevel + levelsToAdd;
+
+      // Set XP to the XP threshold for the new level.
+      // This guarantees the user is actually at that level.
+      const newXp = xpForLevel(newLevel);
+
+      if (existing) {
+        await db
+          .update(userLevelsTable)
+          .set({
+            xp: newXp,
+            level: newLevel,
+          })
+          .where(eq(userLevelsTable.id, existing.id));
+      } else {
+        await db.insert(userLevelsTable).values({
+          guildId,
+          userId: target.id,
+          xp: newXp,
+          level: newLevel,
+          lastMessageAt: null,
+        });
+      }
+
+      // Apply any level role rewards the user has now reached.
+      let rolesAdded = 0;
+
+      try {
+        const member = await interaction.guild?.members.fetch(target.id);
+
+        if (member) {
+          const rewards = await db
+            .select()
+            .from(levelRoleRewardsTable)
+            .where(eq(levelRoleRewardsTable.guildId, guildId));
+
+          for (const reward of rewards) {
+            if (
+              reward.level <= newLevel &&
+              !member.roles.cache.has(reward.roleId)
+            ) {
+              await member.roles.add(
+                reward.roleId,
+                `Level reward reached via /addlevel`,
+              ).catch(() => {});
+
+              rolesAdded++;
+            }
+          }
+        }
+      } catch (err) {
+        logger.warn({ err }, "Failed to apply level rewards from /addlevel");
+      }
+
+      await interaction.reply({
+        embeds: [
+          successEmbed(
+            "Level Added",
+            `🎉 Added **${levelsToAdd} level${levelsToAdd === 1 ? "" : "s"}** to <@${target.id}>.\n\n` +
+            `📊 **Previous Level:** ${oldLevel}\n` +
+            `🚀 **New Level:** ${newLevel}\n` +
+            `✨ **XP:** ${newXp}` +
+            (rolesAdded > 0
+              ? `\n🎁 **Roles Added:** ${rolesAdded}`
+              : ""),
+          ),
+        ],
+        flags: MessageFlags.Ephemeral,
+      });
+    } catch (err) {
+      logger.error({ err }, "Error in /addlevel command");
+
+      await interaction.reply({
+        embeds: [
+          errorEmbed("Failed to add levels. Check the bot/database logs."),
+        ],
+        flags: MessageFlags.Ephemeral,
+      });
+    }
   },
 };
