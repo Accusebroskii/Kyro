@@ -265,7 +265,11 @@ export async function startBot(): Promise<void> {
     `);
     /* Patch columns that may be missing on existing deployments */
     await db.execute(sql`
-      ALTER TABLE guild_config ADD COLUMN IF NOT EXISTS verification_enabled BOOLEAN DEFAULT false;
+      ALTER TABLE guild_config ADD COLUMN IF NOT EXISTS counting_channel_id TEXT;
+    ALTER TABLE guild_config ADD COLUMN IF NOT EXISTS counting_current INTEGER DEFAULT 0;
+    ALTER TABLE guild_config ADD COLUMN IF NOT EXISTS counting_high_score INTEGER DEFAULT 0;
+    ALTER TABLE guild_config ADD COLUMN IF NOT EXISTS counting_last_user_id TEXT;
+    ALTER TABLE guild_config ADD COLUMN IF NOT EXISTS verification_enabled BOOLEAN DEFAULT false;
       ALTER TABLE guild_config ADD COLUMN IF NOT EXISTS verification_method TEXT;
       ALTER TABLE guild_config ADD COLUMN IF NOT EXISTS verification_channel_id TEXT;
       ALTER TABLE guild_config ADD COLUMN IF NOT EXISTS verification_message_id TEXT;
