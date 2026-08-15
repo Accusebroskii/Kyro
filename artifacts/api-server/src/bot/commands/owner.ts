@@ -594,26 +594,23 @@ export const addlevelCommand = {
         flags: MessageFlags.Ephemeral,
       });
     } catch (error) {
-      logger.error(
-        {
-          error,
-          command: "addlevel",
-          guildId,
-          userId: target.id,
-          levels,
-          errorMessage: error instanceof Error ? error.message : String(error),
-          errorStack: error instanceof Error ? error.stack : undefined,
-        },
-        "Failed to add levels",
-      );
+      const errorMessage =
+        error instanceof Error ? error.message : String(error);
+      const errorStack =
+        error instanceof Error ? error.stack ?? "No stack available" : String(error);
+
+      console.error("========================================");
+      console.error("ADDLEVEL FAILED");
+      console.error("Guild:", guildId);
+      console.error("User:", target.id);
+      console.error("Levels:", levels);
+      console.error("Error:", errorMessage);
+      console.error("Stack:", errorStack);
+      console.error("========================================");
 
       await interaction.reply({
         embeds: [
-          errorEmbed(
-            `Failed to add levels: ${
-              error instanceof Error ? error.message : String(error)
-            }`,
-          ),
+          errorEmbed(`Failed to add levels: ${errorMessage}`),
         ],
         flags: MessageFlags.Ephemeral,
       });
