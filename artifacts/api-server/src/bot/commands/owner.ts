@@ -1,3 +1,4 @@
+import { xpForLevel } from "./levels.js";
 import {
   SlashCommandBuilder,
   ChatInputCommandInteraction,
