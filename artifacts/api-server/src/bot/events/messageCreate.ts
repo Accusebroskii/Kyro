@@ -15,62 +15,48 @@ async function handleCounting(message: Message, guildId: string): Promise<boolea
     .where(eq(guildConfigTable.guildId, guildId))
     .limit(1);
 
-  // Counting isn't configured for this server/channel.
+  // Counting isn't configured for this guild/channel.
   if (!config?.countingChannelId || message.channelId !== config.countingChannelId) {
     return false;
   }
 
   const content = message.content.trim();
 
-  // Non-number messages are ignored by counting and continue through
-  // the other message handlers.
-  if (!/^[1-9]\d*$/.test(content)) {
-    return false;
-  }
-
-  const number = Number(content);
-
-  // Prevent unsafe JavaScript integers from being accepted.
-  if (!Number.isSafeInteger(number)) {
-    await message.delete().catch(() => {});
-
-    if (message.channel instanceof TextChannel) {
-      const warning = await message.channel.send(
-        `❌ <@${message.author.id}> That number is too large.`
-      ).catch(() => null);
-
-      if (warning) {
-        setTimeout(() => warning.delete().catch(() => {}), 4000);
-      }
-    }
-
+  // Only handle whole-number messages in the counting channel.
+  // Other messages are ignored by the counting system.
+  if (!/^\d+$/.test(content)) {
     return true;
   }
 
+  const number = Number(content);
   const current = config.countingCurrent ?? 0;
   const expected = current + 1;
 
-  // The same person cannot count twice consecutively.
+  // ─────────────────────────────────────────────
+  // Same user cannot count twice in a row
+  // ─────────────────────────────────────────────
+
   if (config.countingLastUserId === message.author.id) {
     await message.delete().catch(() => {});
 
     if (message.channel instanceof TextChannel) {
-      const warning = await message.channel.send(
+      await message.channel.send(
         `❌ <@${message.author.id}> You can't count twice in a row!`
-      ).catch(() => null);
-
-      if (warning) {
-        setTimeout(() => warning.delete().catch(() => {}), 4000);
-      }
+      ).catch(() => {});
     }
 
     return true;
   }
 
-  // Wrong number = reset the count.
+  // ─────────────────────────────────────────────
+  // Wrong number
+  // ─────────────────────────────────────────────
+
   if (number !== expected) {
+    // Delete the user's incorrect number.
     await message.delete().catch(() => {});
 
+    // Reset the counting game.
     await db
       .update(guildConfigTable)
       .set({
@@ -80,24 +66,27 @@ async function handleCounting(message: Message, guildId: string): Promise<boolea
       })
       .where(eq(guildConfigTable.guildId, guildId));
 
+    // IMPORTANT:
+    // This warning is NOT deleted anymore.
     if (message.channel instanceof TextChannel) {
-      const warning = await message.channel.send(
-        `❌ <@${message.author.id}> Wrong number! The count has been reset. Start again with **1**.`
-      ).catch(() => null);
-
-      if (warning) {
-        setTimeout(() => warning.delete().catch(() => {}), 5000);
-      }
+      await message.channel.send(
+        `❌ <@${message.author.id}> Wrong number! You sent **${number}**, but the next number was **${expected}**.\n` +
+        `🔄 The count has been reset. Start again with **1**.`
+      ).catch(() => {});
     }
 
     return true;
   }
 
-  // Correct number.
+  // ─────────────────────────────────────────────
+  // Correct number
+  // ─────────────────────────────────────────────
+
   const newCount = number;
+
   const highScore = Math.max(
     config.countingHighScore ?? 0,
-    newCount
+    newCount,
   );
 
   await db
@@ -109,6 +98,9 @@ async function handleCounting(message: Message, guildId: string): Promise<boolea
       updatedAt: new Date(),
     })
     .where(eq(guildConfigTable.guildId, guildId));
+
+  // React with ✅ to the correct counting message.
+  await message.react("✅").catch(() => {});
 
   return true;
 }
