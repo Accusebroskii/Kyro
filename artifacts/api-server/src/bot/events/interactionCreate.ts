@@ -77,13 +77,7 @@ export async function onInteractionCreate(interaction: Interaction): Promise<voi
     const error = err instanceof Error ? err : new Error(String(err));
 
     logger.error(
-      {
-        command: interaction.commandName,
-        errorMessage: error.message,
-        errorName: error.name,
-        errorStack: error.stack,
-      },
-      "Slash command crashed"
+      `Slash command crashed [${interaction.commandName}]: ${error.stack || error.message}`
     );
 
     const payload = {
