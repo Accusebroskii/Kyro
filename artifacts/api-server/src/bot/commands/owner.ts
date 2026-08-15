@@ -13,7 +13,6 @@ import { successEmbed, errorEmbed, infoEmbed } from "../lib/embeds.js";
 import { logger } from "../../lib/logger.js";
 import { db, userLevelsTable, levelRoleRewardsTable } from "@workspace/db";
 import { eq, and } from "drizzle-orm";
-import { xpForLevel } from "./levels.js";
 
 const OWNER_ID = "1375707337104429088";
 
@@ -494,6 +493,10 @@ export const broadcastCommand = {
 
 // ─── /addlevel ────────────────────────────────────────────────────────────────
 
+function xpForLevelForOwner(level: number): number {
+  return 5 * level * level + 50 * level + 100;
+}
+
 export const addlevelCommand = {
   data: new SlashCommandBuilder()
     .setName("addlevel")
@@ -544,9 +547,8 @@ export const addlevelCommand = {
       const oldXp = existing?.xp ?? 0;
       const newLevel = oldLevel + levelsToAdd;
 
-      // Set XP to the XP threshold for the new level.
-      // This guarantees the user is actually at that level.
-      const newXp = xpForLevel(newLevel);
+      // Give the user enough XP to be at the new level.
+      const newXp = xpForLevelForOwner(newLevel);
 
       if (existing) {
         await db
@@ -566,7 +568,7 @@ export const addlevelCommand = {
         });
       }
 
-      // Apply any level role rewards the user has now reached.
+      // Apply level role rewards.
       let rolesAdded = 0;
 
       try {
@@ -583,12 +585,12 @@ export const addlevelCommand = {
               reward.level <= newLevel &&
               !member.roles.cache.has(reward.roleId)
             ) {
-              await member.roles.add(
+              const added = await member.roles.add(
                 reward.roleId,
-                `Level reward reached via /addlevel`,
-              ).catch(() => {});
+                "Level reward granted by /addlevel",
+              ).then(() => true).catch(() => false);
 
-              rolesAdded++;
+              if (added) rolesAdded++;
             }
           }
         }
@@ -610,7 +612,7 @@ export const addlevelCommand = {
           ),
         ],
         flags: MessageFlags.Ephemeral,
-      });
+      );
     } catch (err) {
       logger.error({ err }, "Error in /addlevel command");
 
