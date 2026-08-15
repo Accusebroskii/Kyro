@@ -15,18 +15,38 @@ async function handleCounting(message: Message, guildId: string): Promise<boolea
     .where(eq(guildConfigTable.guildId, guildId))
     .limit(1);
 
+  // Counting isn't configured for this server/channel.
   if (!config?.countingChannelId || message.channelId !== config.countingChannelId) {
     return false;
   }
 
   const content = message.content.trim();
 
-  // Only process plain whole numbers.
-  if (!/^\d+$/.test(content)) {
-    return true;
+  // Non-number messages are ignored by counting and continue through
+  // the other message handlers.
+  if (!/^[1-9]\d*$/.test(content)) {
+    return false;
   }
 
   const number = Number(content);
+
+  // Prevent unsafe JavaScript integers from being accepted.
+  if (!Number.isSafeInteger(number)) {
+    await message.delete().catch(() => {});
+
+    if (message.channel instanceof TextChannel) {
+      const warning = await message.channel.send(
+        `❌ <@${message.author.id}> That number is too large.`
+      ).catch(() => null);
+
+      if (warning) {
+        setTimeout(() => warning.delete().catch(() => {}), 4000);
+      }
+    }
+
+    return true;
+  }
+
   const current = config.countingCurrent ?? 0;
   const expected = current + 1;
 
@@ -62,7 +82,7 @@ async function handleCounting(message: Message, guildId: string): Promise<boolea
 
     if (message.channel instanceof TextChannel) {
       const warning = await message.channel.send(
-        `❌ <@${message.author.id}> Wrong number! The next count starts at **1**.`
+        `❌ <@${message.author.id}> Wrong number! The count has been reset. Start again with **1**.`
       ).catch(() => null);
 
       if (warning) {
@@ -73,8 +93,12 @@ async function handleCounting(message: Message, guildId: string): Promise<boolea
     return true;
   }
 
+  // Correct number.
   const newCount = number;
-  const highScore = Math.max(config.countingHighScore ?? 0, newCount);
+  const highScore = Math.max(
+    config.countingHighScore ?? 0,
+    newCount
+  );
 
   await db
     .update(guildConfigTable)
@@ -88,7 +112,6 @@ async function handleCounting(message: Message, guildId: string): Promise<boolea
 
   return true;
 }
-
 
 export async function onMessageCreate(message: Message): Promise<void> {
   if (message.author.bot || !message.guild) return;
