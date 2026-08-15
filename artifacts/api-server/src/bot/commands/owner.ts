@@ -594,10 +594,27 @@ export const addlevelCommand = {
         flags: MessageFlags.Ephemeral,
       });
     } catch (error) {
-      logger.error({ error, command: "addlevel" }, "Failed to add levels");
+      logger.error(
+        {
+          error,
+          command: "addlevel",
+          guildId,
+          userId: target.id,
+          levels,
+          errorMessage: error instanceof Error ? error.message : String(error),
+          errorStack: error instanceof Error ? error.stack : undefined,
+        },
+        "Failed to add levels",
+      );
 
       await interaction.reply({
-        embeds: [errorEmbed("Failed to add levels. Check the bot logs.")],
+        embeds: [
+          errorEmbed(
+            `Failed to add levels: ${
+              error instanceof Error ? error.message : String(error)
+            }`,
+          ),
+        ],
         flags: MessageFlags.Ephemeral,
       });
     }
