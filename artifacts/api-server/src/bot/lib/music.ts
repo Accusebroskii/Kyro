@@ -291,6 +291,163 @@ export async function searchSongs(query: string, limit = 5): Promise<Song[]> {
       return await resolveSpotifyUrl(query);
     }
 
+    const isUrl = /^https?:\/\//i.test(query.trim());
+
+    const args = [
+      "--dump-single-json",
+      "--flat-playlist",
+      "--no-warnings",
+      "--geo-bypass",
+      "--js-runtimes",
+      "node",
+      "--remote-components",
+      "ejs:github",
+      ...getCookiesArgs(),
+      isUrl ? query : `ytsearch${Math.max(1, limit)}:${query}`,
+    ];
+
+    logger.info(
+      {
+        ytdlpPath: YTDLP_PATH,
+        query,
+        limit,
+        isUrl,
+        args: args.map((arg) =>
+          arg === COOKIES_PATH ? "[COOKIES_PATH]" : arg,
+        ),
+      },
+      "Starting yt-dlp music search",
+    );
+
+    const result = await new Promise<{
+      stdout: string;
+      stderr: string;
+      exitCode: number | null;
+    }>((resolve, reject) => {
+      const proc = spawnYtDlp(args);
+
+      let stdout = "";
+      let stderr = "";
+
+      proc.stdout.on("data", (chunk: Buffer) => {
+        stdout += chunk.toString();
+      });
+
+      proc.stderr.on("data", (chunk: Buffer) => {
+        stderr += chunk.toString();
+      });
+
+      proc.on("error", reject);
+
+      proc.on("close", (exitCode) => {
+        resolve({
+          stdout,
+          stderr,
+          exitCode,
+        });
+      });
+    });
+
+    if (result.stderr.trim()) {
+      logger.warn(
+        {
+          query,
+          exitCode: result.exitCode,
+          stderr: result.stderr.trim(),
+        },
+        "yt-dlp search stderr",
+      );
+    }
+
+    if (result.exitCode !== 0 && !result.stdout.trim()) {
+      logger.error(
+        {
+          query,
+          exitCode: result.exitCode,
+          stderr: result.stderr.trim(),
+        },
+        "yt-dlp search failed",
+      );
+
+      return [];
+    }
+
+    const songs: Song[] = [];
+
+    for (const line of result.stdout.split("\n")) {
+      const trimmed = line.trim();
+
+      if (!trimmed) continue;
+
+      try {
+        const data = JSON.parse(trimmed);
+
+        const url =
+          data.webpage_url ||
+          data.url ||
+          (data.id ? `https://www.youtube.com/watch?v=${data.id}` : "");
+
+        if (!url) continue;
+
+        songs.push({
+          title: data.title || data.fulltitle || "Unknown",
+          url,
+          duration: formatDuration(
+            Number(data.duration) || 0,
+          ),
+          thumbnail:
+            data.thumbnail ||
+            (data.thumbnails?.length
+              ? data.thumbnails[data.thumbnails.length - 1]?.url || ""
+              : ""),
+          requestedBy: "",
+          requestedById: "",
+        });
+
+        if (songs.length >= limit) break;
+      } catch {
+        // Ignore non-JSON lines from yt-dlp.
+      }
+    }
+
+    if (songs.length === 0) {
+      logger.warn(
+        {
+          query,
+          exitCode: result.exitCode,
+          stdoutLength: result.stdout.length,
+          stderr: result.stderr.trim(),
+        },
+        "yt-dlp returned no playable search results",
+      );
+    }
+
+    logger.info(
+      {
+        query,
+        resultCount: songs.length,
+      },
+      "Search complete",
+    );
+
+    return songs;
+  } catch (err) {
+    logger.error(
+      {
+        err,
+        query,
+      },
+      "Error searching songs",
+    );
+
+    return [];
+  }
+}{
+  try {
+    if (query.includes("spotify.com")) {
+      return await resolveSpotifyUrl(query);
+    }
+
     const isUrl = query.startsWith("http");
 
     // NOTE: player_client=android is intentionally NOT used for search.
