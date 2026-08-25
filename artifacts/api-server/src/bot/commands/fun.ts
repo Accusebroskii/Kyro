@@ -266,7 +266,7 @@ export const shipCommand = {
 export const rpsCommand = {
   data: new SlashCommandBuilder()
     .setName("rps")
-    .setDescription("Play Rock Paper Scissors against Kyro")
+    .setDescription("Play Rock Paper Scissors against Calyx")
     .addStringOption((o) =>
       o
         .setName("choice")
@@ -292,14 +292,14 @@ export const rpsCommand = {
       (player === "scissors" && bot === "paper")
     )
       result = "You win! 🎉";
-    else result = "Kyro wins! 🤖";
+    else result = "Calyx wins! 🤖";
 
     const embed = new EmbedBuilder()
       .setTitle("✂️ Rock Paper Scissors")
       .setColor(0x5865f2)
       .addFields(
         { name: "You chose", value: `${emojis[player]} ${player}`, inline: true },
-        { name: "Kyro chose", value: `${emojis[bot]} ${bot}`, inline: true },
+        { name: "Calyx chose", value: `${emojis[bot]} ${bot}`, inline: true },
         { name: "Result", value: result, inline: false },
       )
       .setTimestamp();

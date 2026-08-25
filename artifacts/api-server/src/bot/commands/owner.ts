@@ -84,7 +84,7 @@ export const botinfoCommand = {
             { name: "📦 Node.js", value: process.version, inline: true },
             { name: "💾 Memory", value: `${Math.round(process.memoryUsage().heapUsed / 1024 / 1024)}MB`, inline: true },
           )
-          .setFooter({ text: "Kyro • " })
+          .setFooter({ text: "Calyx • " })
           .setTimestamp(),
       ],
     });
@@ -115,7 +115,7 @@ export const bugCommand = {
 export const sayCommand = {
   data: new SlashCommandBuilder()
     .setName("say")
-    .setDescription("Make Kyro say something in a channel (owner only)")
+    .setDescription("Make Calyx say something in a channel (owner only)")
     .addStringOption((o) =>
       o.setName("message").setDescription("What to say").setRequired(true).setMaxLength(2000),
     )
@@ -161,7 +161,7 @@ export const sayCommand = {
 export const dmCommand = {
   data: new SlashCommandBuilder()
     .setName("dm")
-    .setDescription("DM any user as Kyro (owner only)")
+    .setDescription("DM any user as Calyx (owner only)")
     .addUserOption((o) => o.setName("user").setDescription("Who to DM").setRequired(true))
     .addStringOption((o) =>
       o.setName("message").setDescription("Message content").setRequired(true).setMaxLength(2000),
@@ -197,7 +197,7 @@ export const dmCommand = {
 export const setstatusCommand = {
   data: new SlashCommandBuilder()
     .setName("setstatus")
-    .setDescription("Override Kyro's status (owner only)")
+    .setDescription("Override Calyx's status (owner only)")
     .addStringOption((o) =>
       o.setName("text").setDescription("Status text (leave blank to reset to rotation)").setMaxLength(128),
     )
@@ -243,7 +243,7 @@ export const setstatusCommand = {
 export const guildsCommand = {
   data: new SlashCommandBuilder()
     .setName("guilds")
-    .setDescription("List all servers Kyro is in (owner only)"),
+    .setDescription("List all servers Calyx is in (owner only)"),
   async execute(interaction: ChatInputCommandInteraction) {
     if (!ownerOnly(interaction)) return;
 
@@ -279,7 +279,7 @@ export const guildsCommand = {
 export const globalbanCommand = {
   data: new SlashCommandBuilder()
     .setName("globalban")
-    .setDescription("Ban a user ID from ALL servers Kyro is in (owner only)")
+    .setDescription("Ban a user ID from ALL servers Calyx is in (owner only)")
     .addStringOption((o) =>
       o.setName("userid").setDescription("User ID to ban").setRequired(true),
     )
@@ -347,7 +347,7 @@ export const globalbanCommand = {
 export const botnameCommand = {
   data: new SlashCommandBuilder()
     .setName("botname")
-    .setDescription("Change Kyro's username (owner only — rate limited by Discord)")
+    .setDescription("Change Calyx's username (owner only — rate limited by Discord)")
     .addStringOption((o) =>
       o.setName("name").setDescription("New username").setRequired(true).setMinLength(2).setMaxLength(32),
     ),
@@ -376,7 +376,7 @@ export const botnameCommand = {
 export const botavatarCommand = {
   data: new SlashCommandBuilder()
     .setName("botavatar")
-    .setDescription("Change Kyro's avatar (owner only)")
+    .setDescription("Change Calyx's avatar (owner only)")
     .addStringOption((o) =>
       o.setName("url").setDescription("Direct image URL (png/jpg/gif)").setRequired(true),
     ),
@@ -449,10 +449,10 @@ export const broadcastCommand = {
     let failed = 0;
 
     const embed = new EmbedBuilder()
-      .setTitle("📣 Announcement from Kyro")
+      .setTitle("📣 Announcement from Calyx")
       .setDescription(text)
       .setColor(0x5865f2)
-      .setFooter({ text: "Kyro Bot • Community" })
+      .setFooter({ text: "Calyx Bot • Community" })
       .setTimestamp();
 
     for (const guild of interaction.client.guilds.cache.values()) {
