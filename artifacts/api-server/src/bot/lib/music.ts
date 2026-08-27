@@ -442,7 +442,7 @@ export async function searchSongs(query: string, limit = 5): Promise<Song[]> {
 
     return [];
   }
-}{
+{
   try {
     if (query.includes("spotify.com")) {
       return await resolveSpotifyUrl(query);
