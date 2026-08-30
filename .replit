@@ -61,4 +61,4 @@ externalPort = 3000
 OWNER_ID = "1375707337104429088"
 
 [nix]
-packages = ["python3Full", "fly", "flyctl", "speech-tools", "nano"]
+packages = ["python3Full", "fly", "flyctl", "speech-tools", "nano", "psmisc"]
