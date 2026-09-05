@@ -1,3 +1,4 @@
+import { MessageFlags } from "discord.js";
 import {
   SlashCommandBuilder,
   ChatInputCommandInteraction,
@@ -64,7 +65,7 @@ export const playCommand = {
     if (!vc) {
       await interaction.reply({
         embeds: [errorEmbed("You must be in a voice channel.")],
-        ephemeral: true,
+        flags: MessageFlags.Ephemeral,
       });
       return;
     }
@@ -163,7 +164,7 @@ export const skipCommand = {
     if (!vc) {
       await interaction.reply({
         embeds: [errorEmbed("You must be in the voice channel.")],
-        ephemeral: true,
+        flags: MessageFlags.Ephemeral,
       });
       return;
     }
@@ -191,7 +192,7 @@ export const stopCommand = {
     if (!vc) {
       await interaction.reply({
         embeds: [errorEmbed("You must be in the voice channel.")],
-        ephemeral: true,
+        flags: MessageFlags.Ephemeral,
       });
       return;
     }
@@ -371,7 +372,7 @@ export const disconnectCommand = {
     if (!vc) {
       await interaction.reply({
         embeds: [errorEmbed("You must be in the voice channel.")],
-        ephemeral: true,
+        flags: MessageFlags.Ephemeral,
       });
       return;
     }
@@ -428,7 +429,7 @@ export const playlistCommand = {
       if (!current) {
         await interaction.reply({
           embeds: [errorEmbed("Nothing in the queue to save.")],
-          ephemeral: true,
+          flags: MessageFlags.Ephemeral,
         });
         return;
       }
@@ -486,7 +487,7 @@ export const playlistCommand = {
       if (!vc) {
         await interaction.reply({
           embeds: [errorEmbed("You must be in a voice channel.")],
-          ephemeral: true,
+          flags: MessageFlags.Ephemeral,
         });
         return;
       }

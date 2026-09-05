@@ -1,3 +1,4 @@
+import { MessageFlags } from "discord.js";
 import {
   SlashCommandBuilder,
   ChatInputCommandInteraction,
@@ -51,12 +52,12 @@ export const ticketCommand = {
         guildId, guild, userId: interaction.user.id,
         userTag: interaction.user.tag, subject,
       });
-      await interaction.reply({ content: `Your ticket has been created: ${channel}`, ephemeral: true });
+      await interaction.reply({ content: `Your ticket has been created: ${channel}`, flags: MessageFlags.Ephemeral });
     } else if (sub === "close") {
       const channel = interaction.channel as TextChannel;
       const reason = interaction.options.getString("reason") ?? "Closed by staff";
       const [ticket] = await db.select().from(ticketsTable).where(and(eq(ticketsTable.guildId, guildId), eq(ticketsTable.channelId, channel.id), eq(ticketsTable.status, "open"))).limit(1);
-      if (!ticket) { await interaction.reply({ embeds: [errorEmbed("This is not an open ticket channel.")], ephemeral: true }); return; }
+      if (!ticket) { await interaction.reply({ embeds: [errorEmbed("This is not an open ticket channel.")], flags: MessageFlags.Ephemeral }); return; }
       if (!(await checkModerator(interaction)) && ticket.userId !== interaction.user.id) return;
 
       await interaction.reply({ embeds: [successEmbed("Ticket Closed", `This ticket has been closed.\n**Reason:** ${reason}`)] });
@@ -80,7 +81,7 @@ export const ticketCommand = {
       if (!(await checkModerator(interaction))) return;
       const channel = interaction.channel as TextChannel;
       const [ticket] = await db.select().from(ticketsTable).where(and(eq(ticketsTable.guildId, guildId), eq(ticketsTable.channelId, channel.id))).limit(1);
-      if (!ticket) { await interaction.reply({ embeds: [errorEmbed("This is not a ticket channel.")], ephemeral: true }); return; }
+      if (!ticket) { await interaction.reply({ embeds: [errorEmbed("This is not a ticket channel.")], flags: MessageFlags.Ephemeral }); return; }
       await db.update(ticketsTable).set({ claimedBy: interaction.user.id, claimedByTag: interaction.user.tag }).where(eq(ticketsTable.id, ticket.id));
       await interaction.reply({ embeds: [successEmbed("Ticket Claimed", `${interaction.user.tag} has claimed this ticket.`)] });
     }
@@ -135,7 +136,7 @@ export async function handleTicketPanelSelect(interaction: StringSelectMenuInter
     userTag: interaction.user.tag,
     subject,
   });
-  await interaction.reply({ content: `Your ticket has been created: ${channel}`, ephemeral: true });
+  await interaction.reply({ content: `Your ticket has been created: ${channel}`, flags: MessageFlags.Ephemeral });
 }
 
 export async function handleTicketCreate(interaction: ButtonInteraction) {
@@ -147,7 +148,7 @@ export async function handleTicketCreate(interaction: ButtonInteraction) {
     userTag: interaction.user.tag,
     subject: panelName,
   });
-  await interaction.reply({ content: `Your ticket has been created: ${channel}`, ephemeral: true });
+  await interaction.reply({ content: `Your ticket has been created: ${channel}`, flags: MessageFlags.Ephemeral });
 }
 
 /**

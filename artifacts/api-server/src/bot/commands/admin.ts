@@ -1,3 +1,4 @@
+import { MessageFlags } from "discord.js";
 import {
   SlashCommandBuilder,
   ChatInputCommandInteraction,
@@ -31,7 +32,7 @@ export const roleCommand = {
     const sub = interaction.options.getSubcommand();
     const target = interaction.options.getMember("user") as GuildMember;
     const role = interaction.options.getRole("role", true);
-    if (!target) { await interaction.reply({ embeds: [errorEmbed("Member not found.")], ephemeral: true }); return; }
+    if (!target) { await interaction.reply({ embeds: [errorEmbed("Member not found.")], flags: MessageFlags.Ephemeral }); return; }
     try {
       if (sub === "add") {
         await target.roles.add(role.id);
@@ -41,7 +42,7 @@ export const roleCommand = {
         await interaction.reply({ embeds: [successEmbed("Role Removed", `Removed <@&${role.id}> from ${target.user.username}.`)] });
       }
     } catch (err) {
-      await interaction.reply({ embeds: [errorEmbed(String(err))], ephemeral: true });
+      await interaction.reply({ embeds: [errorEmbed(String(err))], flags: MessageFlags.Ephemeral });
     }
   },
 };
@@ -68,7 +69,7 @@ export const roleAllCommand = {
     if (!botMember) {
       await interaction.reply({
         embeds: [errorEmbed("Couldn't resolve the bot's own member object in this server.")],
-        ephemeral: true,
+        flags: MessageFlags.Ephemeral,
       });
       return;
     }
@@ -79,7 +80,7 @@ export const roleAllCommand = {
             `I can't assign <@&${role.id}> because it's positioned above (or equal to) my own highest role in the role list. Move my role above it in Server Settings → Roles, then try again.`,
           ),
         ],
-        ephemeral: true,
+        flags: MessageFlags.Ephemeral,
       });
       return;
     }
@@ -219,7 +220,7 @@ export const announceCommand = {
     const target = (interaction.options.getChannel("channel") ?? interaction.channel) as TextChannel;
     const embed = new EmbedBuilder().setTitle(title).setDescription(msg).setColor(0x5865f2).setTimestamp().setFooter({ text: `Posted by ${interaction.user.username}` });
     await target.send({ embeds: [embed] });
-    await interaction.reply({ content: `Announcement sent to ${target}.`, ephemeral: true });
+    await interaction.reply({ content: `Announcement sent to ${target}.`, flags: MessageFlags.Ephemeral });
   },
 };
 
@@ -234,7 +235,7 @@ export const nickCommand = {
     if (!(await checkModerator(interaction))) return;
     const target = interaction.options.getMember("user") as GuildMember;
     const nick = interaction.options.getString("nickname") ?? null;
-    if (!target) { await interaction.reply({ embeds: [errorEmbed("Member not found.")], ephemeral: true }); return; }
+    if (!target) { await interaction.reply({ embeds: [errorEmbed("Member not found.")], flags: MessageFlags.Ephemeral }); return; }
     await target.setNickname(nick);
     await interaction.reply({ embeds: [successEmbed("Nickname Changed", nick ? `Set ${target.user.username}'s nickname to **${nick}**.` : `Reset ${target.user.username}'s nickname.`)] });
   },

@@ -1,3 +1,4 @@
+import { MessageFlags } from "discord.js";
 import {
   SlashCommandBuilder,
   ChatInputCommandInteraction,
@@ -32,7 +33,7 @@ export const unbanCommand = {
       const bans = await interaction.guild!.bans.fetch();
       const ban = bans.get(userId);
       if (!ban) {
-        await interaction.reply({ embeds: [errorEmbed("No ban found for that user ID.")], ephemeral: true });
+        await interaction.reply({ embeds: [errorEmbed("No ban found for that user ID.")], flags: MessageFlags.Ephemeral });
         return;
       }
       await interaction.guild!.members.unban(userId, reason);
@@ -47,7 +48,7 @@ export const unbanCommand = {
       });
       await interaction.reply({ embeds: [modEmbed("Unban", ban.user.tag, interaction.user.username, reason)] });
     } catch (err) {
-      await interaction.reply({ embeds: [errorEmbed(`Could not unban: ${String(err)}`)], ephemeral: true });
+      await interaction.reply({ embeds: [errorEmbed(`Could not unban: ${String(err)}`)], flags: MessageFlags.Ephemeral });
     }
   },
 };
@@ -104,7 +105,7 @@ export const snipeCommand = {
     if (!cached) {
       await interaction.reply({
         embeds: [infoEmbed("🔍 Snipe", "No recently deleted messages found in this channel.")],
-        ephemeral: true,
+        flags: MessageFlags.Ephemeral,
       });
       return;
     }
@@ -137,13 +138,13 @@ export const moveCommand = {
     const target = interaction.options.getMember("user") as GuildMember;
     const channel = interaction.options.getChannel("channel", true);
     if (!target) {
-      await interaction.reply({ embeds: [errorEmbed("User not found.")], ephemeral: true });
+      await interaction.reply({ embeds: [errorEmbed("User not found.")], flags: MessageFlags.Ephemeral });
       return;
     }
     if (!target.voice.channel) {
       await interaction.reply({
         embeds: [errorEmbed("That user is not currently in a voice channel.")],
-        ephemeral: true,
+        flags: MessageFlags.Ephemeral,
       });
       return;
     }
@@ -153,7 +154,7 @@ export const moveCommand = {
         embeds: [successEmbed("Moved", `${target.user.username} has been moved to <#${channel.id}>.`)],
       });
     } catch (err) {
-      await interaction.reply({ embeds: [errorEmbed(`Could not move user: ${String(err)}`)], ephemeral: true });
+      await interaction.reply({ embeds: [errorEmbed(`Could not move user: ${String(err)}`)], flags: MessageFlags.Ephemeral });
     }
   },
 };
@@ -177,7 +178,7 @@ export const suggestCommand = {
     if (!config?.suggestionsChannelId) {
       await interaction.reply({
         embeds: [errorEmbed("Suggestions are not set up. Ask an admin to run `/setup suggestions`.")],
-        ephemeral: true,
+        flags: MessageFlags.Ephemeral,
       });
       return;
     }
@@ -185,7 +186,7 @@ export const suggestCommand = {
     if (!channel) {
       await interaction.reply({
         embeds: [errorEmbed("The suggestions channel no longer exists. Please contact an admin.")],
-        ephemeral: true,
+        flags: MessageFlags.Ephemeral,
       });
       return;
     }
@@ -201,7 +202,7 @@ export const suggestCommand = {
     await msg.react("👎").catch(() => {});
     await interaction.reply({
       embeds: [successEmbed("Suggestion Submitted", `Your suggestion has been posted in <#${channel.id}>!`)],
-      ephemeral: true,
+      flags: MessageFlags.Ephemeral,
     });
   },
 };
@@ -232,7 +233,7 @@ export const remindmeCommand = {
     if (!match) {
       await interaction.reply({
         embeds: [errorEmbed("Invalid time format. Examples: `30s`, `10m`, `2h`, `1d`")],
-        ephemeral: true,
+        flags: MessageFlags.Ephemeral,
       });
       return;
     }
@@ -243,7 +244,7 @@ export const remindmeCommand = {
     if (ms > 7 * 86_400_000) {
       await interaction.reply({
         embeds: [errorEmbed("Reminders can be set at most 7 days from now.")],
-        ephemeral: true,
+        flags: MessageFlags.Ephemeral,
       });
       return;
     }
@@ -258,7 +259,7 @@ export const remindmeCommand = {
     const ts = Math.floor(remindAt.getTime() / 1000);
     await interaction.reply({
       embeds: [successEmbed("⏰ Reminder Set", `I'll remind you <t:${ts}:R>!\n\n**Message:** ${message}`)],
-      ephemeral: true,
+      flags: MessageFlags.Ephemeral,
     });
   },
 };

@@ -1,3 +1,4 @@
+import { MessageFlags } from "discord.js";
 import {
   SlashCommandBuilder,
   ChatInputCommandInteraction,
@@ -59,7 +60,7 @@ export const backupCommand = {
 
   async execute(interaction: ChatInputCommandInteraction) {
     if (!isOwner(interaction)) {
-      await interaction.reply({ embeds: [errorEmbed("Only the server owner can use backup commands.")], ephemeral: true });
+      await interaction.reply({ embeds: [errorEmbed("Only the server owner can use backup commands.")], flags: MessageFlags.Ephemeral });
       return;
     }
 
@@ -123,7 +124,7 @@ export const backupCommand = {
     } else if (sub === "restore") {
       const [latest] = await db.select().from(serverBackupsTable).where(eq(serverBackupsTable.guildId, guildId)).orderBy(desc(serverBackupsTable.createdAt)).limit(1);
       if (!latest) {
-        await interaction.reply({ embeds: [errorEmbed("No backups found for this server. Run `/backup create` first.")], ephemeral: true });
+        await interaction.reply({ embeds: [errorEmbed("No backups found for this server. Run `/backup create` first.")], flags: MessageFlags.Ephemeral });
         return;
       }
 
@@ -141,13 +142,13 @@ export const backupCommand = {
           ),
         ],
         components: [row],
-        ephemeral: true,
+        flags: MessageFlags.Ephemeral,
       });
 
     } else if (sub === "list") {
       const backups = await db.select().from(serverBackupsTable).where(eq(serverBackupsTable.guildId, guildId)).orderBy(desc(serverBackupsTable.createdAt)).limit(10);
       if (!backups.length) {
-        await interaction.reply({ embeds: [infoEmbed("Backups", "No backups found.")], ephemeral: true });
+        await interaction.reply({ embeds: [infoEmbed("Backups", "No backups found.")], flags: MessageFlags.Ephemeral });
         return;
       }
       const list = backups
@@ -156,14 +157,14 @@ export const backupCommand = {
           return `**#${b.id}** — <t:${Math.floor(new Date(b.createdAt).getTime() / 1000)}:f> — ${d.roles.length} roles, ${d.channels.length} channels`;
         })
         .join("\n");
-      await interaction.reply({ embeds: [infoEmbed("Backups", list)], ephemeral: true });
+      await interaction.reply({ embeds: [infoEmbed("Backups", list)], flags: MessageFlags.Ephemeral });
     }
   },
 };
 
 export async function handleBackupRestoreConfirm(interaction: ButtonInteraction) {
   if (!isOwner(interaction)) {
-    await interaction.reply({ embeds: [errorEmbed("Only the server owner can do this.")], ephemeral: true });
+    await interaction.reply({ embeds: [errorEmbed("Only the server owner can do this.")], flags: MessageFlags.Ephemeral });
     return;
   }
 

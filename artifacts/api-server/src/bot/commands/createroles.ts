@@ -1,3 +1,4 @@
+import { MessageFlags } from "discord.js";
 import {
   SlashCommandBuilder,
   ChatInputCommandInteraction,
@@ -110,7 +111,7 @@ export const createRolesCommand = {
 };
 
 export async function handleCreateRolesModalSubmit(interaction: ModalSubmitInteraction) {
-  await interaction.deferReply({ ephemeral: true });
+  await interaction.deferReply({ flags: MessageFlags.Ephemeral });
 
   const raw = interaction.fields.getTextInputValue("roles");
   const parsed = parseRoles(raw);

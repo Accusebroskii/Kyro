@@ -1,3 +1,4 @@
+import { MessageFlags } from "discord.js";
 import {
   SlashCommandBuilder,
   ChatInputCommandInteraction,
@@ -141,14 +142,14 @@ export const giveawayCommand = {
 
       const durationMs = parseDuration(durationStr);
       if (!durationMs) {
-        await interaction.reply({ embeds: [errorEmbed("Invalid duration. Use formats like `1h`, `30m`, `2d`.")], ephemeral: true });
+        await interaction.reply({ embeds: [errorEmbed("Invalid duration. Use formats like `1h`, `30m`, `2d`.")], flags: MessageFlags.Ephemeral });
         return;
       }
 
       const endsAt = new Date(Date.now() + durationMs);
       const textChannel = interaction.guild!.channels.cache.get(channel.id) as TextChannel;
       if (!textChannel) {
-        await interaction.reply({ embeds: [errorEmbed("Could not find that channel.")], ephemeral: true });
+        await interaction.reply({ embeds: [errorEmbed("Could not find that channel.")], flags: MessageFlags.Ephemeral });
         return;
       }
 
@@ -166,24 +167,24 @@ export const giveawayCommand = {
 
       setTimeout(() => endGiveaway(giveaway!.id, client), durationMs);
 
-      await interaction.reply({ embeds: [successEmbed("Giveaway Started", `Giveaway for **${prize}** started in <#${channel.id}>!\n**ID:** ${giveaway!.id}`)], ephemeral: true });
+      await interaction.reply({ embeds: [successEmbed("Giveaway Started", `Giveaway for **${prize}** started in <#${channel.id}>!\n**ID:** ${giveaway!.id}`)], flags: MessageFlags.Ephemeral });
 
     } else if (sub === "end") {
       const id = interaction.options.getInteger("id", true);
       const [giveaway] = await db.select().from(giveawaysTable).where(and(eq(giveawaysTable.id, id), eq(giveawaysTable.guildId, guildId))).limit(1);
-      if (!giveaway) { await interaction.reply({ embeds: [errorEmbed("Giveaway not found.")], ephemeral: true }); return; }
-      if (giveaway.ended) { await interaction.reply({ embeds: [errorEmbed("This giveaway has already ended.")], ephemeral: true }); return; }
-      await interaction.reply({ embeds: [successEmbed("Ending Giveaway", "Picking winners now...")], ephemeral: true });
+      if (!giveaway) { await interaction.reply({ embeds: [errorEmbed("Giveaway not found.")], flags: MessageFlags.Ephemeral }); return; }
+      if (giveaway.ended) { await interaction.reply({ embeds: [errorEmbed("This giveaway has already ended.")], flags: MessageFlags.Ephemeral }); return; }
+      await interaction.reply({ embeds: [successEmbed("Ending Giveaway", "Picking winners now...")], flags: MessageFlags.Ephemeral });
       await endGiveaway(id, client);
 
     } else if (sub === "reroll") {
       const id = interaction.options.getInteger("id", true);
       const [giveaway] = await db.select().from(giveawaysTable).where(and(eq(giveawaysTable.id, id), eq(giveawaysTable.guildId, guildId))).limit(1);
-      if (!giveaway) { await interaction.reply({ embeds: [errorEmbed("Giveaway not found.")], ephemeral: true }); return; }
-      if (!giveaway.ended) { await interaction.reply({ embeds: [errorEmbed("This giveaway hasn't ended yet.")], ephemeral: true }); return; }
+      if (!giveaway) { await interaction.reply({ embeds: [errorEmbed("Giveaway not found.")], flags: MessageFlags.Ephemeral }); return; }
+      if (!giveaway.ended) { await interaction.reply({ embeds: [errorEmbed("This giveaway hasn't ended yet.")], flags: MessageFlags.Ephemeral }); return; }
 
       const entries = await db.select().from(giveawayEntriesTable).where(eq(giveawayEntriesTable.giveawayId, id));
-      if (entries.length === 0) { await interaction.reply({ embeds: [errorEmbed("No entries to reroll from.")], ephemeral: true }); return; }
+      if (entries.length === 0) { await interaction.reply({ embeds: [errorEmbed("No entries to reroll from.")], flags: MessageFlags.Ephemeral }); return; }
 
       const shuffled = [...entries].sort(() => Math.random() - 0.5);
       const newWinners = shuffled.slice(0, giveaway.winnersCount).map((e) => e.userId);
@@ -198,11 +199,11 @@ export const giveawayCommand = {
     } else if (sub === "list") {
       const active = await db.select().from(giveawaysTable).where(and(eq(giveawaysTable.guildId, guildId), eq(giveawaysTable.ended, false)));
       if (!active.length) {
-        await interaction.reply({ embeds: [infoEmbed("Active Giveaways", "No active giveaways.")], ephemeral: true });
+        await interaction.reply({ embeds: [infoEmbed("Active Giveaways", "No active giveaways.")], flags: MessageFlags.Ephemeral });
         return;
       }
       const list = active.map((g) => `**#${g.id}** — ${g.prize} — ends <t:${Math.floor(new Date(g.endsAt).getTime() / 1000)}:R> in <#${g.channelId}>`).join("\n");
-      await interaction.reply({ embeds: [infoEmbed("Active Giveaways", list)], ephemeral: true });
+      await interaction.reply({ embeds: [infoEmbed("Active Giveaways", list)], flags: MessageFlags.Ephemeral });
     }
   },
 };
@@ -212,7 +213,7 @@ export async function handleGiveawayEnter(interaction: ButtonInteraction) {
   const [giveaway] = await db.select().from(giveawaysTable).where(eq(giveawaysTable.id, giveawayId)).limit(1);
 
   if (!giveaway || giveaway.ended) {
-    await interaction.reply({ content: "This giveaway has already ended.", ephemeral: true });
+    await interaction.reply({ content: "This giveaway has already ended.", flags: MessageFlags.Ephemeral });
     return;
   }
 
@@ -221,7 +222,7 @@ export async function handleGiveawayEnter(interaction: ButtonInteraction) {
   ).limit(1);
 
   if (existing.length > 0) {
-    await interaction.reply({ content: "You've already entered this giveaway!", ephemeral: true });
+    await interaction.reply({ content: "You've already entered this giveaway!", flags: MessageFlags.Ephemeral });
     return;
   }
 

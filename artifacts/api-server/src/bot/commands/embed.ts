@@ -1,3 +1,4 @@
+import { MessageFlags } from "discord.js";
 import {
   SlashCommandBuilder,
   ChatInputCommandInteraction,
@@ -129,7 +130,7 @@ export const embedCommand = {
       if (!saved) {
         await interaction.reply({
           embeds: [errorEmbed(`No embed named "${name}" found. Use \`/embed list\` to see saved embeds.`)],
-          ephemeral: true,
+          flags: MessageFlags.Ephemeral,
         });
         return;
       }
@@ -139,7 +140,7 @@ export const embedCommand = {
         (interaction.channel as import("discord.js").TextChannel);
 
       if (!channel || !("send" in channel)) {
-        await interaction.reply({ embeds: [errorEmbed("Couldn't resolve a valid text channel.")], ephemeral: true });
+        await interaction.reply({ embeds: [errorEmbed("Couldn't resolve a valid text channel.")], flags: MessageFlags.Ephemeral });
         return;
       }
 
@@ -156,12 +157,12 @@ export const embedCommand = {
         await channel.send({ embeds: [embed] });
         await interaction.reply({
           embeds: [successEmbed("Embed Sent", `Sent "${name}" to ${channel}.`)],
-          ephemeral: true,
+          flags: MessageFlags.Ephemeral,
         });
       } catch (err: any) {
         await interaction.reply({
           embeds: [errorEmbed(`Failed to send embed: ${err?.message ?? "unknown error"}`)],
-          ephemeral: true,
+          flags: MessageFlags.Ephemeral,
         });
       }
       return;
@@ -180,7 +181,7 @@ export const embedCommand = {
             names.length ? names.map((n) => `• ${n}`).join("\n") : "No embeds saved yet. Use `/embed create` to make one.",
           ),
         ],
-        ephemeral: true,
+        flags: MessageFlags.Ephemeral,
       });
       return;
     }
@@ -192,7 +193,7 @@ export async function handleEmbedModalSubmit(interaction: ModalSubmitInteraction
   const name = decodeURIComponent(encodedName ?? "untitled");
   const guildId = interaction.guildId;
   if (!guildId) {
-    await interaction.reply({ embeds: [errorEmbed("This can only be used in a server.")], ephemeral: true });
+    await interaction.reply({ embeds: [errorEmbed("This can only be used in a server.")], flags: MessageFlags.Ephemeral });
     return;
   }
 
@@ -214,6 +215,6 @@ export async function handleEmbedModalSubmit(interaction: ModalSubmitInteraction
 
   await interaction.reply({
     embeds: [successEmbed("Embed Saved", `Saved as "${name}". Use \`/embed send name:${name}\` to post it.`)],
-    ephemeral: true,
+    flags: MessageFlags.Ephemeral,
   });
 }

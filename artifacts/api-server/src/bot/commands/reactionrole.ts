@@ -1,3 +1,4 @@
+import { MessageFlags } from "discord.js";
 import {
   SlashCommandBuilder,
   ChatInputCommandInteraction,
@@ -57,14 +58,14 @@ export const reactionRoleCommand = {
       try {
         message = await channel.messages.fetch(messageId);
       } catch {
-        await interaction.reply({ embeds: [errorEmbed("Could not find a message with that ID in that channel.")], ephemeral: true });
+        await interaction.reply({ embeds: [errorEmbed("Could not find a message with that ID in that channel.")], flags: MessageFlags.Ephemeral });
         return;
       }
 
       try {
         await message.react(display);
       } catch {
-        await interaction.reply({ embeds: [errorEmbed("Could not react with that emoji. Make sure it's valid and the bot has access to it.")], ephemeral: true });
+        await interaction.reply({ embeds: [errorEmbed("Could not react with that emoji. Make sure it's valid and the bot has access to it.")], flags: MessageFlags.Ephemeral });
         return;
       }
 
@@ -72,7 +73,7 @@ export const reactionRoleCommand = {
         and(eq(reactionRolesTable.guildId, guildId), eq(reactionRolesTable.messageId, messageId), eq(reactionRolesTable.emojiKey, key)),
       );
       if (existing.length > 0) {
-        await interaction.reply({ embeds: [errorEmbed("This emoji is already bound to a role on this message.")], ephemeral: true });
+        await interaction.reply({ embeds: [errorEmbed("This emoji is already bound to a role on this message.")], flags: MessageFlags.Ephemeral });
         return;
       }
 
@@ -80,7 +81,7 @@ export const reactionRoleCommand = {
         guildId, channelId: channel.id, messageId, emojiKey: key, emojiDisplay: display, roleId: role.id,
       });
 
-      await interaction.reply({ embeds: [successEmbed("Reaction Role Added", `Reacting with ${display} on that message now gives <@&${role.id}>.`)], ephemeral: true });
+      await interaction.reply({ embeds: [successEmbed("Reaction Role Added", `Reacting with ${display} on that message now gives <@&${role.id}>.`)], flags: MessageFlags.Ephemeral });
 
     } else if (sub === "remove") {
       const messageId = interaction.options.getString("message_id", true);
@@ -92,20 +93,20 @@ export const reactionRoleCommand = {
       ).returning();
 
       if (deleted.length === 0) {
-        await interaction.reply({ embeds: [errorEmbed("No reaction role binding found for that message/emoji.")], ephemeral: true });
+        await interaction.reply({ embeds: [errorEmbed("No reaction role binding found for that message/emoji.")], flags: MessageFlags.Ephemeral });
         return;
       }
 
-      await interaction.reply({ embeds: [successEmbed("Reaction Role Removed", "That binding has been removed.")], ephemeral: true });
+      await interaction.reply({ embeds: [successEmbed("Reaction Role Removed", "That binding has been removed.")], flags: MessageFlags.Ephemeral });
 
     } else if (sub === "list") {
       const rows = await db.select().from(reactionRolesTable).where(eq(reactionRolesTable.guildId, guildId));
       if (!rows.length) {
-        await interaction.reply({ embeds: [infoEmbed("Reaction Roles", "No reaction roles configured.")], ephemeral: true });
+        await interaction.reply({ embeds: [infoEmbed("Reaction Roles", "No reaction roles configured.")], flags: MessageFlags.Ephemeral });
         return;
       }
       const list = rows.map((r) => `${r.emojiDisplay} → <@&${r.roleId}> (message \`${r.messageId}\` in <#${r.channelId}>)`).join("\n");
-      await interaction.reply({ embeds: [infoEmbed("Reaction Roles", list)], ephemeral: true });
+      await interaction.reply({ embeds: [infoEmbed("Reaction Roles", list)], flags: MessageFlags.Ephemeral });
     }
   },
 };

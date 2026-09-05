@@ -1,3 +1,4 @@
+import { MessageFlags } from "discord.js";
 import {
   Interaction,
   ChatInputCommandInteraction,
@@ -82,7 +83,7 @@ export async function onInteractionCreate(interaction: Interaction): Promise<voi
 
     const payload = {
       content: `❌ **Command failed**\n\`${error.message}\``,
-      ephemeral: true,
+      flags: 64,
     };
 
     try {

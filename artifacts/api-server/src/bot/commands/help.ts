@@ -1,3 +1,4 @@
+import { MessageFlags } from "discord.js";
 import {
   SlashCommandBuilder,
   ChatInputCommandInteraction,
@@ -236,7 +237,7 @@ export const helpCommand = {
         )
         .setFooter({ text: "Use /help to see all categories" })
         .setTimestamp();
-      await interaction.reply({ embeds: [embed], ephemeral: true });
+      await interaction.reply({ embeds: [embed], flags: MessageFlags.Ephemeral });
       return;
     }
 
@@ -269,6 +270,6 @@ export const helpCommand = {
       text: `${totalCommands} total commands across ${Object.keys(COMMAND_CATEGORIES).length} categories`,
     });
 
-    await interaction.reply({ embeds: [embed], ephemeral: true });
+    await interaction.reply({ embeds: [embed], flags: MessageFlags.Ephemeral });
   },
 };

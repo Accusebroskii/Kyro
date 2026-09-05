@@ -1,3 +1,4 @@
+import { MessageFlags } from "discord.js";
 import {
   SlashCommandBuilder,
   ChatInputCommandInteraction,
@@ -41,7 +42,7 @@ export const inviteCommand = {
   async execute(interaction: ChatInputCommandInteraction) {
     const clientId = process.env.DISCORD_CLIENT_ID;
     if (!clientId) {
-      await interaction.reply({ content: "Bot client ID is not configured.", ephemeral: true });
+      await interaction.reply({ content: "Bot client ID is not configured.", flags: MessageFlags.Ephemeral });
       return;
     }
 
@@ -49,7 +50,7 @@ export const inviteCommand = {
 
     await interaction.reply({
       embeds: [infoEmbed("📨 Invite Me", `[Click here to add this bot to your server](${url})`)],
-      ephemeral: true,
+      flags: MessageFlags.Ephemeral,
     });
   },
 };

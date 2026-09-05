@@ -1,3 +1,4 @@
+import { MessageFlags } from "discord.js";
 import {
   ChatInputCommandInteraction,
   GuildMember,
@@ -14,7 +15,7 @@ export async function checkPermission(
   if (!interaction.memberPermissions?.has(perm)) {
     await interaction.reply({
       content: "You don't have permission to use this command.",
-      ephemeral: true,
+      flags: MessageFlags.Ephemeral,
     });
     return false;
   }
@@ -26,7 +27,7 @@ export async function checkModerator(
 ): Promise<boolean> {
   const member = interaction.member as GuildMember;
   if (!member) {
-    await interaction.reply({ content: "This command must be used in a server.", ephemeral: true });
+    await interaction.reply({ content: "This command must be used in a server.", flags: MessageFlags.Ephemeral });
     return false;
   }
 
@@ -42,7 +43,7 @@ export async function checkModerator(
   if (member.permissions.has(PermissionFlagsBits.ModerateMembers)) return true;
   if (member.permissions.has(PermissionFlagsBits.Administrator)) return true;
 
-  await interaction.reply({ content: "You need Moderator or Administrator permissions.", ephemeral: true });
+  await interaction.reply({ content: "You need Moderator or Administrator permissions.", flags: MessageFlags.Ephemeral });
   return false;
 }
 
@@ -51,7 +52,7 @@ export async function checkAdmin(
 ): Promise<boolean> {
   const member = interaction.member as GuildMember;
   if (!member) {
-    await interaction.reply({ content: "This command must be used in a server.", ephemeral: true });
+    await interaction.reply({ content: "This command must be used in a server.", flags: MessageFlags.Ephemeral });
     return false;
   }
 
@@ -65,7 +66,7 @@ export async function checkAdmin(
   if (cfg?.adminRoleId && member.roles.cache.has(cfg.adminRoleId)) return true;
   if (member.permissions.has(PermissionFlagsBits.Administrator)) return true;
 
-  await interaction.reply({ content: "You need Administrator permissions.", ephemeral: true });
+  await interaction.reply({ content: "You need Administrator permissions.", flags: MessageFlags.Ephemeral });
   return false;
 }
 

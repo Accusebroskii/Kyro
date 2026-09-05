@@ -2,7 +2,7 @@ import {
   SlashCommandBuilder,
   ChatInputCommandInteraction,
   MessageFlags,
-  ChannelType,
+  ChannelType
 } from "discord.js";
 import { logger } from "../../lib/logger.js";
 import { errorEmbed } from "../lib/embeds.js";

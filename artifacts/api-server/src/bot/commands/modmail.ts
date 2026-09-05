@@ -1,3 +1,4 @@
+import { MessageFlags } from "discord.js";
 import {
   SlashCommandBuilder,
   ChatInputCommandInteraction,
@@ -34,7 +35,7 @@ export const modmailCommand = {
       .limit(1);
 
     if (!thread) {
-      await interaction.reply({ embeds: [errorEmbed("This command can only be used in an active ModMail thread.")], ephemeral: true });
+      await interaction.reply({ embeds: [errorEmbed("This command can only be used in an active ModMail thread.")], flags: MessageFlags.Ephemeral });
       return;
     }
 

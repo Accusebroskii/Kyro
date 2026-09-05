@@ -1,3 +1,4 @@
+import { MessageFlags } from "discord.js";
 import {
   SlashCommandBuilder,
   ChatInputCommandInteraction,
@@ -28,7 +29,7 @@ export const banCommand = {
       await db.insert(modLogsTable).values({ guildId: interaction.guildId!, action: "ban", targetId: target.id, targetTag: target.username, moderatorId: interaction.user.id, moderatorTag: interaction.user.username, reason });
       await interaction.reply({ embeds: [modEmbed("Ban", target.username, interaction.user.username, reason)] });
     } catch (err) {
-      await interaction.reply({ embeds: [errorEmbed(`Could not ban ${target.username}: ${String(err)}`)], ephemeral: true });
+      await interaction.reply({ embeds: [errorEmbed(`Could not ban ${target.username}: ${String(err)}`)], flags: MessageFlags.Ephemeral });
     }
   },
 };
@@ -43,14 +44,14 @@ export const kickCommand = {
   async execute(interaction: ChatInputCommandInteraction) {
     if (!(await checkModerator(interaction))) return;
     const target = interaction.options.getMember("user") as GuildMember;
-    if (!target) { await interaction.reply({ embeds: [errorEmbed("User not found in this server.")], ephemeral: true }); return; }
+    if (!target) { await interaction.reply({ embeds: [errorEmbed("User not found in this server.")], flags: MessageFlags.Ephemeral }); return; }
     const reason = interaction.options.getString("reason") ?? "No reason provided";
     try {
       await target.kick(reason);
       await db.insert(modLogsTable).values({ guildId: interaction.guildId!, action: "kick", targetId: target.id, targetTag: target.user.username, moderatorId: interaction.user.id, moderatorTag: interaction.user.username, reason });
       await interaction.reply({ embeds: [modEmbed("Kick", target.user.username, interaction.user.username, reason)] });
     } catch (err) {
-      await interaction.reply({ embeds: [errorEmbed(`Could not kick: ${String(err)}`)], ephemeral: true });
+      await interaction.reply({ embeds: [errorEmbed(`Could not kick: ${String(err)}`)], flags: MessageFlags.Ephemeral });
     }
   },
 };
@@ -66,7 +67,7 @@ export const muteCommand = {
   async execute(interaction: ChatInputCommandInteraction) {
     if (!(await checkModerator(interaction))) return;
     const target = interaction.options.getMember("user") as GuildMember;
-    if (!target) { await interaction.reply({ embeds: [errorEmbed("User not found.")], ephemeral: true }); return; }
+    if (!target) { await interaction.reply({ embeds: [errorEmbed("User not found.")], flags: MessageFlags.Ephemeral }); return; }
     const mins = interaction.options.getInteger("duration", true);
     const reason = interaction.options.getString("reason") ?? "No reason provided";
     try {
@@ -74,7 +75,7 @@ export const muteCommand = {
       await db.insert(modLogsTable).values({ guildId: interaction.guildId!, action: "mute", targetId: target.id, targetTag: target.user.username, moderatorId: interaction.user.id, moderatorTag: interaction.user.username, reason, duration: `${mins}m` });
       await interaction.reply({ embeds: [modEmbed("Mute", target.user.username, interaction.user.username, reason, { Duration: `${mins} minutes` })] });
     } catch (err) {
-      await interaction.reply({ embeds: [errorEmbed(String(err))], ephemeral: true });
+      await interaction.reply({ embeds: [errorEmbed(String(err))], flags: MessageFlags.Ephemeral });
     }
   },
 };
@@ -89,7 +90,7 @@ export const unmuteCommand = {
   async execute(interaction: ChatInputCommandInteraction) {
     if (!(await checkModerator(interaction))) return;
     const target = interaction.options.getMember("user") as GuildMember;
-    if (!target) { await interaction.reply({ embeds: [errorEmbed("User not found.")], ephemeral: true }); return; }
+    if (!target) { await interaction.reply({ embeds: [errorEmbed("User not found.")], flags: MessageFlags.Ephemeral }); return; }
     const reason = interaction.options.getString("reason") ?? "No reason provided";
     await target.timeout(null, reason);
     await db.insert(modLogsTable).values({ guildId: interaction.guildId!, action: "unmute", targetId: target.id, targetTag: target.user.username, moderatorId: interaction.user.id, moderatorTag: interaction.user.username, reason });
@@ -174,7 +175,7 @@ export const timeoutCommand = {
   async execute(interaction: ChatInputCommandInteraction) {
     if (!(await checkModerator(interaction))) return;
     const target = interaction.options.getMember("user") as GuildMember;
-    if (!target) { await interaction.reply({ embeds: [errorEmbed("User not found.")], ephemeral: true }); return; }
+    if (!target) { await interaction.reply({ embeds: [errorEmbed("User not found.")], flags: MessageFlags.Ephemeral }); return; }
     const mins = interaction.options.getInteger("minutes", true);
     const reason = interaction.options.getString("reason") ?? "No reason provided";
     await target.timeout(mins * 60 * 1000, reason);
@@ -192,7 +193,7 @@ export const untimeoutCommand = {
   async execute(interaction: ChatInputCommandInteraction) {
     if (!(await checkModerator(interaction))) return;
     const target = interaction.options.getMember("user") as GuildMember;
-    if (!target) { await interaction.reply({ embeds: [errorEmbed("User not found.")], ephemeral: true }); return; }
+    if (!target) { await interaction.reply({ embeds: [errorEmbed("User not found.")], flags: MessageFlags.Ephemeral }); return; }
     await target.timeout(null);
     await db.insert(modLogsTable).values({ guildId: interaction.guildId!, action: "untimeout", targetId: target.id, targetTag: target.user.username, moderatorId: interaction.user.id, moderatorTag: interaction.user.username });
     await interaction.reply({ embeds: [successEmbed("Timeout Removed", `Timeout removed from ${target.user.username}.`)] });
@@ -210,7 +211,7 @@ export const purgeCommand = {
     if (!(await checkModerator(interaction))) return;
     const amount = interaction.options.getInteger("amount", true);
     const filterUser = interaction.options.getUser("user");
-    await interaction.deferReply({ ephemeral: true });
+    await interaction.deferReply({ flags: MessageFlags.Ephemeral });
     const { TextChannel } = await import("discord.js");
     const channel = interaction.channel;
     if (!(channel instanceof TextChannel)) { await interaction.editReply("This command can only be used in text channels."); return; }

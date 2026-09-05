@@ -1,3 +1,4 @@
+import { MessageFlags } from "discord.js";
 import {
   SlashCommandBuilder,
   ChatInputCommandInteraction,
@@ -70,7 +71,7 @@ export const templateCommand = {
 
   async execute(interaction: ChatInputCommandInteraction) {
     if (!isOwner(interaction)) {
-      await interaction.reply({ embeds: [errorEmbed("Only the server owner can use this command.")], ephemeral: true });
+      await interaction.reply({ embeds: [errorEmbed("Only the server owner can use this command.")], flags: MessageFlags.Ephemeral });
       return;
     }
 
@@ -95,11 +96,11 @@ export const templateCommand = {
 
 export async function handleTemplateModalSubmit(interaction: ModalSubmitInteraction) {
   if (!isOwner(interaction)) {
-    await interaction.reply({ embeds: [errorEmbed("Only the server owner can use this command.")], ephemeral: true });
+    await interaction.reply({ embeds: [errorEmbed("Only the server owner can use this command.")], flags: MessageFlags.Ephemeral });
     return;
   }
 
-  await interaction.deferReply({ ephemeral: true });
+  await interaction.deferReply({ flags: MessageFlags.Ephemeral });
 
   const raw = interaction.fields.getTextInputValue("layout");
   const categories = parseLayout(raw);

@@ -1,3 +1,4 @@
+import { MessageFlags } from "discord.js";
 import {
   SlashCommandBuilder,
   ChatInputCommandInteraction,
@@ -177,11 +178,11 @@ export const setupCommand = {
       } else if (sub === "panel") {
         const { sessionId, draft } = await startPanelBuilder(guildId, interaction.user.id);
       interaction.user.id;
-      await interaction.reply({ ...initialBuilderPayload(sessionId, draft), ephemeral: true });
+      await interaction.reply({ ...initialBuilderPayload(sessionId, draft), flags: MessageFlags.Ephemeral });
 
     } else if (sub === "modmail") {
       if (interaction.user.id !== BOT_OWNER_ID) {
-        await interaction.reply({ embeds: [errorEmbed("Only the bot owner can configure the ModMail forum.")], ephemeral: true });
+        await interaction.reply({ embeds: [errorEmbed("Only the bot owner can configure the ModMail forum.")], flags: MessageFlags.Ephemeral });
         return;
       }
       const forum = interaction.options.getChannel("forum", true);
@@ -198,7 +199,7 @@ export const setupCommand = {
         and(eq(ticketTopicsTable.guildId, guildId), eq(ticketTopicsTable.panelName, panelName))
       );
       if (existingTopics.length >= 25) {
-        await interaction.reply({ embeds: [errorEmbed("You can have a maximum of 25 topics per panel.")], ephemeral: true });
+        await interaction.reply({ embeds: [errorEmbed("You can have a maximum of 25 topics per panel.")], flags: MessageFlags.Ephemeral });
         return;
       }
 
@@ -222,7 +223,7 @@ export const setupCommand = {
         embeds: [infoEmbed("Ticket Topics", topics.length
           ? topics.map((t) => `${t.emoji} **[${t.panelName}]** ${t.label}${t.description ? ` — ${t.description}` : ""}`).join("\n")
           : "No topics found.")],
-        ephemeral: true,
+        flags: MessageFlags.Ephemeral,
       });
 
     } else if (sub === "automod") {
@@ -260,7 +261,7 @@ export const setupCommand = {
         await interaction.reply({ embeds: [infoEmbed("Auto-Roles", roles.length ? roles.map((r) => `<@&${r.roleId}>`).join("\n") : "No auto-roles configured.")] });
       } else {
         const role = interaction.options.getRole("role");
-        if (!role) { await interaction.reply({ embeds: [errorEmbed("Please specify a role.")], ephemeral: true }); return; }
+        if (!role) { await interaction.reply({ embeds: [errorEmbed("Please specify a role.")], flags: MessageFlags.Ephemeral }); return; }
         if (action === "add") {
           await db.insert(autoRolesTable).values({ guildId, roleId: role.id, roleName: role.name });
           await interaction.reply({ embeds: [successEmbed("Auto-Role Added", `<@&${role.id}> will now be given to new members.`)] });
@@ -272,7 +273,7 @@ export const setupCommand = {
 
     } else if (sub === "view") {
       const [cfg] = await db.select().from(guildConfigTable).where(eq(guildConfigTable.guildId, guildId)).limit(1);
-      if (!cfg) { await interaction.reply({ embeds: [errorEmbed("No configuration found. Run a setup command first.")], ephemeral: true }); return; }
+      if (!cfg) { await interaction.reply({ embeds: [errorEmbed("No configuration found. Run a setup command first.")], flags: MessageFlags.Ephemeral }); return; }
       const embed = new EmbedBuilder()
         .setTitle("⚙️ Bot Configuration")
         .setColor(0x5865f2)
@@ -310,13 +311,13 @@ export const setupCommand = {
           embeds: [infoEmbed("Level Role Rewards", rewards.length
             ? rewards.map((r) => `Level ${r.level} → <@&${r.roleId}>`).join("\n")
             : "No level role rewards configured.")],
-          ephemeral: true,
+          flags: MessageFlags.Ephemeral,
         });
       } else {
         const level = interaction.options.getInteger("level");
         const role = interaction.options.getRole("role");
         if (!level || !role) {
-          await interaction.reply({ embeds: [errorEmbed("Please specify both a level and a role.")], ephemeral: true });
+          await interaction.reply({ embeds: [errorEmbed("Please specify both a level and a role.")], flags: MessageFlags.Ephemeral });
           return;
         }
         if (action === "add") {
@@ -345,7 +346,7 @@ export const setupCommand = {
       if (!channel || !unverifiedRole || !verifiedRole) {
         await interaction.reply({
           embeds: [errorEmbed("Setting up verification requires `channel`, `unverifiedrole`, and `verifiedrole` to all be provided.")],
-          ephemeral: true,
+          flags: MessageFlags.Ephemeral,
         });
         return;
       }
@@ -353,7 +354,7 @@ export const setupCommand = {
       if (method === "word" && !word) {
         await interaction.reply({
           embeds: [errorEmbed("The 'Type a Word/Phrase' method requires the `word` option to be set.")],
-          ephemeral: true,
+          flags: MessageFlags.Ephemeral,
         });
         return;
       }
@@ -362,14 +363,14 @@ export const setupCommand = {
       if (botMember && botMember.roles.highest.comparePositionTo(unverifiedRole as import("discord.js").Role) <= 0) {
         await interaction.reply({
           embeds: [errorEmbed(`I can't manage <@&${unverifiedRole.id}> because it's positioned above (or equal to) my own highest role. Move my role above it in Server Settings → Roles.`)],
-          ephemeral: true,
+          flags: MessageFlags.Ephemeral,
         });
         return;
       }
       if (botMember && botMember.roles.highest.comparePositionTo(verifiedRole as import("discord.js").Role) <= 0) {
         await interaction.reply({
           embeds: [errorEmbed(`I can't manage <@&${verifiedRole.id}> because it's positioned above (or equal to) my own highest role. Move my role above it in Server Settings → Roles.`)],
-          ephemeral: true,
+          flags: MessageFlags.Ephemeral,
         });
         return;
       }
@@ -456,7 +457,7 @@ export const setupCommand = {
       const channel = interaction.options.getChannel("channel");
       const threshold = interaction.options.getInteger("threshold");
       if (!channel && !threshold) {
-        await interaction.reply({ embeds: [errorEmbed("Please provide a `channel` and/or `threshold`.")] , ephemeral: true });
+        await interaction.reply({ embeds: [errorEmbed("Please provide a `channel` and/or `threshold`.")] , flags: MessageFlags.Ephemeral });
         return;
       }
       await db.update(guildConfigTable).set({

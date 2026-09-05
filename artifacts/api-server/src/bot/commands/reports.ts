@@ -1,3 +1,4 @@
+import { MessageFlags } from "discord.js";
 import {
   SlashCommandBuilder,
   ChatInputCommandInteraction,
@@ -53,7 +54,7 @@ export const bugreportCommand = {
       ).setTimestamp();
 
     await sendToStaffChannel(interaction, embed);
-    await interaction.reply({ embeds: [successEmbed("Bug Report Submitted", `Your bug report has been submitted (ID: #${report!.id}).\nStaff will review it shortly.`)], ephemeral: true });
+    await interaction.reply({ embeds: [successEmbed("Bug Report Submitted", `Your bug report has been submitted (ID: #${report!.id}).\nStaff will review it shortly.`)], flags: MessageFlags.Ephemeral });
   },
 };
 
@@ -88,7 +89,7 @@ export const playerreportCommand = {
       ).setTimestamp();
 
     await sendToStaffChannel(interaction, embed);
-    await interaction.reply({ embeds: [successEmbed("Player Report Submitted", `Report #${report!.id} submitted. Staff will review it.`)], ephemeral: true });
+    await interaction.reply({ embeds: [successEmbed("Player Report Submitted", `Report #${report!.id} submitted. Staff will review it.`)], flags: MessageFlags.Ephemeral });
   },
 };
 
@@ -112,6 +113,6 @@ export const supportCommand = {
       .setColor(0x5865f2)
       .setTimestamp();
 
-    await interaction.reply({ embeds: [embed], components: [row], ephemeral: true });
+    await interaction.reply({ embeds: [embed], components: [row], flags: MessageFlags.Ephemeral });
   },
 };

@@ -5,7 +5,7 @@ import { logger } from "../../lib/logger.js";
 import { handleMessageXp } from "../commands/levels.js";
 
 const spamTracker = new Map<string, { count: number; lastMessage: number; warned: boolean }>();
-const KALEIGH_USER_ID = "1492136743493828790";
+const KALEIGH_USER_ID = "1236728950558953563";
 
 // Counting system
 async function handleCounting(message: Message, guildId: string): Promise<boolean> {

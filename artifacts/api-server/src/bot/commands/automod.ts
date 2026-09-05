@@ -1,3 +1,4 @@
+import { MessageFlags } from "discord.js";
 import {
   SlashCommandBuilder,
   ChatInputCommandInteraction,
@@ -153,7 +154,7 @@ export const automodCommand = {
     }
 
     if (sub === "status") {
-      await interaction.deferReply({ ephemeral: true });
+      await interaction.deferReply({ flags: MessageFlags.Ephemeral });
       const client = interaction.client;
       let total = 0;
       const perGuild: string[] = [];
@@ -179,7 +180,7 @@ export const automodCommand = {
 
     if (sub === "setup-all") {
       if (!isOwner(interaction)) {
-        await interaction.reply({ embeds: [errorEmbed("Only the bot owner can use this.")], ephemeral: true });
+        await interaction.reply({ embeds: [errorEmbed("Only the bot owner can use this.")], flags: MessageFlags.Ephemeral });
         return;
       }
       await interaction.deferReply();

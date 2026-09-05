@@ -15,13 +15,13 @@ export default {
     if (interaction.user.id !== process.env.OWNER_ID) {
       return interaction.reply({
         content: "❌ This command is only available to the bot owner.",
-        ephemeral: true
+        flags: MessageFlags.Ephemeral
       });
     }
     if (interaction.user.id !== process.env.OWNER_ID) {
       return interaction.reply({
         content: "❌ This command is only available to the bot owner.",
-        ephemeral: true
+        flags: MessageFlags.Ephemeral
       });
     }
     const guildId = interaction.options.getString("server_id", true);
@@ -36,7 +36,7 @@ export default {
       if (!channel || !channel.isTextBased()) {
         return interaction.reply({
           content: "❌ No usable text channel found.",
-          ephemeral: true
+          flags: MessageFlags.Ephemeral
         });
       }
 
@@ -47,13 +47,13 @@ export default {
 
       return interaction.reply({
         content: `✅ Invite for **${guild.name}**:\n${invite.url}`,
-        ephemeral: true
+        flags: MessageFlags.Ephemeral
       });
 
     } catch {
       return interaction.reply({
         content: "❌ I can't access that server or create an invite.",
-        ephemeral: true
+        flags: MessageFlags.Ephemeral
       });
     }
   }

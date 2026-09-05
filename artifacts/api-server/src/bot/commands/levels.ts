@@ -1,3 +1,4 @@
+import { MessageFlags } from "discord.js";
 import {
   SlashCommandBuilder,
   ChatInputCommandInteraction,
@@ -75,7 +76,7 @@ export const rankCommand = {
 
     const [row] = await db.select().from(userLevelsTable).where(and(eq(userLevelsTable.guildId, guildId), eq(userLevelsTable.userId, target.id))).limit(1);
     if (!row) {
-      await interaction.reply({ embeds: [infoEmbed("Rank", `${target.id === interaction.user.id ? "You haven't" : `${target.username} hasn't`} sent any messages yet.`)], ephemeral: true });
+      await interaction.reply({ embeds: [infoEmbed("Rank", `${target.id === interaction.user.id ? "You haven't" : `${target.username} hasn't`} sent any messages yet.`)], flags: MessageFlags.Ephemeral });
       return;
     }
 

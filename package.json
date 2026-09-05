@@ -1,10 +1,10 @@
 {
-  "name": "@workspace/api-server",
+  "name": "workspace-root",
   "version": "0.0.0",
   "private": true,
   "type": "module",
   "scripts": {
-    "dev": "export NODE_ENV=development && pnpm --filter @workspace/api-server run build && pnpm --filter @workspace/api-server run start",
+    "dev": "export NODE_ENV=development && pnpm --filter @workspace/api-server run build && node artifacts/api-server/dist/index.mjs",
     "build": "pnpm --filter @workspace/api-server run build",
     "start": "pnpm --filter @workspace/api-server run start",
     "typecheck": "pnpm --filter @workspace/api-server run typecheck",
@@ -36,6 +36,7 @@
     "@types/cors": "^2.8.19",
     "@types/express": "^5.0.6",
     "@types/node": "catalog:",
+    "drizzle-kit": "^0.31.10",
     "esbuild": "0.27.3",
     "esbuild-plugin-pino": "^2.3.3",
     "pino-pretty": "^13.1.3",

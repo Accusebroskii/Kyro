@@ -1,3 +1,4 @@
+import { MessageFlags } from "discord.js";
 import {
   ButtonInteraction,
   ModalSubmitInteraction,
@@ -118,7 +119,7 @@ export async function handlePanelSlotButton(interaction: ButtonInteraction) {
   const [, sessionId, idxStr] = interaction.customId.split(":");
   const draft = drafts.get(sessionId);
   if (!draft) {
-    await interaction.reply({ embeds: [errorEmbed("This builder session expired. Run `/setup panel` again.")], ephemeral: true });
+    await interaction.reply({ embeds: [errorEmbed("This builder session expired. Run `/setup panel` again.")], flags: MessageFlags.Ephemeral });
     return;
   }
   const index = parseInt(idxStr, 10);
@@ -164,7 +165,7 @@ export async function handlePanelInfoButton(interaction: ButtonInteraction) {
   const [, sessionId] = interaction.customId.split(":");
   const draft = drafts.get(sessionId);
   if (!draft) {
-    await interaction.reply({ embeds: [errorEmbed("This builder session expired. Run `/setup panel` again.")], ephemeral: true });
+    await interaction.reply({ embeds: [errorEmbed("This builder session expired. Run `/setup panel` again.")], flags: MessageFlags.Ephemeral });
     return;
   }
 
@@ -216,7 +217,7 @@ export async function handlePanelChannelSelect(interaction: ChannelSelectMenuInt
   const [, sessionId] = interaction.customId.split(":");
   const draft = drafts.get(sessionId);
   if (!draft) {
-    await interaction.reply({ embeds: [errorEmbed("This builder session expired. Run `/setup panel` again.")], ephemeral: true });
+    await interaction.reply({ embeds: [errorEmbed("This builder session expired. Run `/setup panel` again.")], flags: MessageFlags.Ephemeral });
     return;
   }
   draft.channelId = interaction.values[0];
@@ -232,7 +233,7 @@ export async function handlePanelModalSubmit(interaction: ModalSubmitInteraction
     const index = parseInt(parts[2], 10);
     const draft = drafts.get(sessionId);
     if (!draft) {
-      await interaction.reply({ embeds: [errorEmbed("This builder session expired. Run `/setup panel` again.")], ephemeral: true });
+      await interaction.reply({ embeds: [errorEmbed("This builder session expired. Run `/setup panel` again.")], flags: MessageFlags.Ephemeral });
       return;
     }
     const label = interaction.fields.getTextInputValue("label").trim();
@@ -247,7 +248,7 @@ export async function handlePanelModalSubmit(interaction: ModalSubmitInteraction
     const sessionId = parts[1];
     const draft = drafts.get(sessionId);
     if (!draft) {
-      await interaction.reply({ embeds: [errorEmbed("This builder session expired. Run `/setup panel` again.")], ephemeral: true });
+      await interaction.reply({ embeds: [errorEmbed("This builder session expired. Run `/setup panel` again.")], flags: MessageFlags.Ephemeral });
       return;
     }
     draft.title = interaction.fields.getTextInputValue("title").trim();
@@ -268,24 +269,24 @@ export async function handlePanelSend(interaction: ButtonInteraction) {
   const [, sessionId] = interaction.customId.split(":");
   const draft = drafts.get(sessionId);
   if (!draft) {
-    await interaction.reply({ embeds: [errorEmbed("This builder session expired. Run `/setup panel` again.")], ephemeral: true });
+    await interaction.reply({ embeds: [errorEmbed("This builder session expired. Run `/setup panel` again.")], flags: MessageFlags.Ephemeral });
     return;
   }
 
   const filledTopics = draft.topics.filter((t): t is TopicSlot => !!t?.label);
 
   if (!draft.channelId) {
-    await interaction.reply({ embeds: [errorEmbed("Please select a channel before sending.")], ephemeral: true });
+    await interaction.reply({ embeds: [errorEmbed("Please select a channel before sending.")], flags: MessageFlags.Ephemeral });
     return;
   }
   if (filledTopics.length === 0) {
-    await interaction.reply({ embeds: [errorEmbed("Please fill in at least one topic slot before sending.")], ephemeral: true });
+    await interaction.reply({ embeds: [errorEmbed("Please fill in at least one topic slot before sending.")], flags: MessageFlags.Ephemeral });
     return;
   }
 
   const channel = interaction.guild!.channels.cache.get(draft.channelId) as TextChannel;
   if (!channel) {
-    await interaction.reply({ embeds: [errorEmbed("Selected channel no longer exists.")], ephemeral: true });
+    await interaction.reply({ embeds: [errorEmbed("Selected channel no longer exists.")], flags: MessageFlags.Ephemeral });
     return;
   }
 

@@ -7,7 +7,7 @@ import {
   ChannelType,
   TextChannel,
   EmbedBuilder,
-  PermissionFlagsBits,
+  PermissionFlagsBits
 } from "discord.js";
 import { setBugMode, isBugModeActive, setCustomStatus } from "../events/ready.js";
 import { successEmbed, errorEmbed, infoEmbed } from "../lib/embeds.js";
