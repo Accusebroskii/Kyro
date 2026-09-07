@@ -141,7 +141,12 @@ export async function startBot(): Promise<void> {
     await db.execute(sql`
       CREATE TABLE IF NOT EXISTS guild_config (
         id SERIAL PRIMARY KEY, guild_id TEXT NOT NULL UNIQUE, guild_name TEXT, guild_icon_url TEXT,
-        member_count INTEGER, welcome_channel_id TEXT, welcome_message TEXT, log_channel_id TEXT,
+        member_count INTEGER, welcome_channel_id TEXT, welcome_message TEXT,
+        welcome_background_url TEXT, welcome_accent_color TEXT NOT NULL DEFAULT '#9b59b6',
+        welcome_show_avatar BOOLEAN NOT NULL DEFAULT true,
+        welcome_show_server_icon BOOLEAN NOT NULL DEFAULT true,
+        welcome_show_member_count BOOLEAN NOT NULL DEFAULT true,
+        log_channel_id TEXT,
         mod_log_channel_id TEXT, ticket_category_id TEXT, ticket_log_channel_id TEXT,
         ticket_counter INTEGER DEFAULT 0, modmail_forum_id TEXT, mute_role_id TEXT,
         mod_role_id TEXT, admin_role_id TEXT, owner_id TEXT, antispam_enabled BOOLEAN DEFAULT false,
@@ -270,6 +275,11 @@ export async function startBot(): Promise<void> {
     ALTER TABLE guild_config ADD COLUMN IF NOT EXISTS counting_high_score INTEGER DEFAULT 0;
     ALTER TABLE guild_config ADD COLUMN IF NOT EXISTS counting_last_user_id TEXT;
     ALTER TABLE guild_config ADD COLUMN IF NOT EXISTS verification_enabled BOOLEAN DEFAULT false;
+      ALTER TABLE guild_config ADD COLUMN IF NOT EXISTS welcome_background_url TEXT;
+      ALTER TABLE guild_config ADD COLUMN IF NOT EXISTS welcome_accent_color TEXT NOT NULL DEFAULT '#9b59b6';
+      ALTER TABLE guild_config ADD COLUMN IF NOT EXISTS welcome_show_avatar BOOLEAN NOT NULL DEFAULT true;
+      ALTER TABLE guild_config ADD COLUMN IF NOT EXISTS welcome_show_server_icon BOOLEAN NOT NULL DEFAULT true;
+      ALTER TABLE guild_config ADD COLUMN IF NOT EXISTS welcome_show_member_count BOOLEAN NOT NULL DEFAULT true;
       ALTER TABLE guild_config ADD COLUMN IF NOT EXISTS verification_method TEXT;
       ALTER TABLE guild_config ADD COLUMN IF NOT EXISTS verification_channel_id TEXT;
       ALTER TABLE guild_config ADD COLUMN IF NOT EXISTS verification_message_id TEXT;

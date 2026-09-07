@@ -1,0 +1,99 @@
+Upgrade my existing Calyx Discord bot welcome system to be similar to ProBot/Welcome Bot.
+
+IMPORTANT:
+
+* Do NOT remove or break any existing bot features.
+* Use my existing `/setup welcome` system and existing database structure where possible.
+* Inspect the current welcome code first, then modify it cleanly.
+* Keep everything TypeScript/Discord.js compatible with my current project.
+
+I want the welcome system to support customizable welcome cards/images.
+
+FEATURES:
+
+1. Custom background
+
+* Allow the server owner/admin to set a custom background image using a URL.
+* Add a `/setup welcome background <url>` option.
+* Add an option to remove/reset the background.
+* The background should be used when generating the welcome image.
+
+2. Welcome image/card
+   When someone joins, generate a welcome card containing:
+
+* The member's Discord avatar
+* Username/display name
+* Server name
+* Server icon
+* Current server member count
+* Member number if possible
+* Custom welcome message
+* The configured background image
+
+Make the card look modern and professional, similar to popular Discord welcome bots.
+
+3. Custom message
+   Allow admins to configure the welcome message.
+
+Support variables such as:
+{user}
+{username}
+{server}
+{membercount}
+{member}
+{userid}
+
+Example:
+Welcome {user} to {server}!
+You are member #{membercount}.
+
+Variables should automatically be replaced when the member joins.
+
+4. Welcome channel
+   Keep/use the existing welcome channel configuration.
+   Admins should be able to choose which channel receives the welcome message.
+
+5. Customization
+   Allow admins to configure:
+
+* Background URL
+* Welcome message
+* Welcome channel
+* Card color/accent color
+* Whether the avatar is displayed
+* Whether the server icon is displayed
+* Whether member count is displayed
+
+6. Preview
+   Add:
+   `/setup welcome preview`
+
+This should generate/send an example welcome card so admins can see what it looks like before enabling it.
+
+7. Database
+   Store the welcome settings in the existing database instead of hardcoding them.
+
+If the database needs new columns, update the existing Drizzle schema and make sure the migration/schema push process works with the current project.
+
+8. Permissions
+   Only users with appropriate administrator/manage server permissions should be able to configure the welcome system.
+
+9. Error handling
+   If the background URL is invalid or the image cannot be loaded, don't crash the bot. Fall back to a default background/card.
+
+10. Dependencies
+    Check the existing project before installing anything.
+    If an image-generation library is required, use a stable package compatible with the current Node.js version and install it through pnpm.
+
+11. Existing system
+    DO NOT create a completely separate welcome system if one already exists.
+    Modify and improve the existing implementation so current welcome settings continue working.
+
+After implementing everything:
+
+* Check TypeScript for errors.
+* Check that `/setup welcome` registers correctly.
+* Check that the bot still builds.
+* Tell me exactly which files you changed.
+* Tell me if I need to run any database commands.
+* Tell me if I need to run any Git commands.

@@ -40,8 +40,16 @@ const COMMAND_CATEGORIES: Record<
     emoji: "🛠️",
     commands: [
       {
-        name: "/setup welcome",
-        description: "Configure the welcome message and channel",
+        name: "/setup welcome configure",
+        description: "Configure the welcome card, message, and channel",
+      },
+      {
+        name: "/setup welcome background",
+        description: "Set a custom welcome card background",
+      },
+      {
+        name: "/setup welcome preview",
+        description: "Preview the current welcome card",
       },
       {
         name: "/setup logs",

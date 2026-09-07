@@ -2,6 +2,8 @@ import { MessageFlags } from "discord.js";
 import {
   SlashCommandBuilder,
   ChatInputCommandInteraction,
+  AttachmentBuilder,
+  GuildMember,
   PermissionFlagsBits,
   ChannelType,
   EmbedBuilder,
@@ -15,6 +17,8 @@ import { eq, and } from "drizzle-orm";
 import { checkAdmin } from "../lib/permissions.js";
 import { successEmbed, errorEmbed, infoEmbed } from "../lib/embeds.js";
 import { startPanelBuilder, initialBuilderPayload } from "../lib/panelBuilder.js";
+import { generateWelcomeCard } from "../lib/welcomeCard.js";
+import { logger } from "../../lib/logger.js";
 
 const BOT_OWNER_ID = "1375707337104429088";
 
@@ -29,10 +33,27 @@ export const setupCommand = {
   data: new SlashCommandBuilder()
     .setName("setup")
     .setDescription("Configure bot features for this server")
-    .addSubcommand((s) =>
-      s.setName("welcome").setDescription("Configure the welcome system")
-        .addChannelOption((o) => o.setName("channel").setDescription("Welcome channel").setRequired(true).addChannelTypes(ChannelType.GuildText))
-        .addStringOption((o) => o.setName("message").setDescription("Welcome message. Use {user}, {username}, {server}, {membercount}")),
+    .addSubcommandGroup((g) =>
+      g.setName("welcome").setDescription("Configure the welcome system")
+        .addSubcommand((s) =>
+          s.setName("configure").setDescription("Configure welcome channel, message, and card options")
+            .addChannelOption((o) => o.setName("channel").setDescription("Welcome channel").addChannelTypes(ChannelType.GuildText))
+            .addStringOption((o) => o.setName("message").setDescription("Message using {user}, {username}, {server}, {membercount}, {member}, {userid}").setMaxLength(1000))
+            .addStringOption((o) => o.setName("color").setDescription("Card accent color, e.g. #9b59b6").setMaxLength(7))
+            .addBooleanOption((o) => o.setName("show-avatar").setDescription("Show the member avatar on the card"))
+            .addBooleanOption((o) => o.setName("show-server-icon").setDescription("Show the server icon on the card"))
+            .addBooleanOption((o) => o.setName("show-member-count").setDescription("Show member count and member number")),
+        )
+        .addSubcommand((s) =>
+          s.setName("background").setDescription("Set a custom welcome card background image")
+            .addStringOption((o) => o.setName("url").setDescription("Public HTTP(S) image URL").setRequired(true).setMaxLength(2048)),
+        )
+        .addSubcommand((s) =>
+          s.setName("reset-background").setDescription("Remove the custom background and use the default"),
+        )
+        .addSubcommand((s) =>
+          s.setName("preview").setDescription("Preview the current welcome card"),
+        ),
     )
     .addSubcommand((s) =>
       s.setName("logs").setDescription("Configure logging channels")
@@ -146,6 +167,7 @@ export const setupCommand = {
 
   async execute(interaction: ChatInputCommandInteraction) {
     if (!(await checkAdmin(interaction))) return;
+    const group = interaction.options.getSubcommandGroup(false);
     const sub = interaction.options.getSubcommand();
     const guildId = interaction.guildId!;
 
@@ -154,11 +176,57 @@ export const setupCommand = {
       await db.insert(guildConfigTable).values({ guildId, guildName: interaction.guild!.name, ownerId: interaction.guild!.ownerId });
     }
 
-    if (sub === "welcome") {
-      const channel = interaction.options.getChannel("channel", true);
-      const message = interaction.options.getString("message");
-      await db.update(guildConfigTable).set({ welcomeChannelId: channel.id, ...(message ? { welcomeMessage: message } : {}) }).where(eq(guildConfigTable.guildId, guildId));
-      await interaction.reply({ embeds: [successEmbed("Welcome System", `Welcome channel set to <#${channel.id}>.${message ? `\nMessage: ${message}` : ""}`)] });
+    if (group === "welcome") {
+      if (sub === "configure") {
+        const channel = interaction.options.getChannel("channel");
+        const message = interaction.options.getString("message");
+        const color = interaction.options.getString("color");
+        const showAvatar = interaction.options.getBoolean("show-avatar");
+        const showServerIcon = interaction.options.getBoolean("show-server-icon");
+        const showMemberCount = interaction.options.getBoolean("show-member-count");
+
+        if (color && !/^#?[0-9a-f]{6}$/i.test(color)) {
+          await interaction.reply({ embeds: [errorEmbed("Color must be a 6-digit hex value such as `#9b59b6`.")], flags: MessageFlags.Ephemeral });
+          return;
+        }
+
+        await db.update(guildConfigTable).set({
+          ...(channel ? { welcomeChannelId: channel.id } : {}),
+          ...(message !== null ? { welcomeMessage: message } : {}),
+          ...(color ? { welcomeAccentColor: color.startsWith("#") ? color : `#${color}` } : {}),
+          ...(showAvatar !== null ? { welcomeShowAvatar: showAvatar } : {}),
+          ...(showServerIcon !== null ? { welcomeShowServerIcon: showServerIcon } : {}),
+          ...(showMemberCount !== null ? { welcomeShowMemberCount: showMemberCount } : {}),
+        }).where(eq(guildConfigTable.guildId, guildId));
+        await interaction.reply({ embeds: [successEmbed("Welcome System", "Welcome settings updated.") ] });
+      } else if (sub === "background") {
+        const url = interaction.options.getString("url", true);
+        try {
+          const parsed = new URL(url);
+          if (parsed.protocol !== "http:" && parsed.protocol !== "https:") throw new Error("protocol");
+        } catch {
+          await interaction.reply({ embeds: [errorEmbed("Please provide a valid public HTTP(S) image URL.")], flags: MessageFlags.Ephemeral });
+          return;
+        }
+        await db.update(guildConfigTable).set({ welcomeBackgroundUrl: url }).where(eq(guildConfigTable.guildId, guildId));
+        await interaction.reply({ embeds: [successEmbed("Welcome Background", "Custom background saved. If it cannot be loaded, the default card background will be used automatically.")] });
+      } else if (sub === "reset-background") {
+        await db.update(guildConfigTable).set({ welcomeBackgroundUrl: null }).where(eq(guildConfigTable.guildId, guildId));
+        await interaction.reply({ embeds: [successEmbed("Welcome Background", "Custom background removed. The default background will be used.")] });
+      } else if (sub === "preview") {
+        const [config] = await db.select().from(guildConfigTable).where(eq(guildConfigTable.guildId, guildId)).limit(1);
+        try {
+          const card = await generateWelcomeCard(interaction.member as GuildMember, config!);
+          await interaction.reply({
+            content: "Here is a preview using your current welcome settings.",
+            files: [new AttachmentBuilder(card, { name: "welcome-preview.png" })],
+            flags: MessageFlags.Ephemeral,
+          });
+        } catch (err) {
+          logger.warn({ err, guildId }, "Welcome preview generation failed");
+          await interaction.reply({ embeds: [errorEmbed("I could not generate the preview. Check that the background URL is publicly accessible.")], flags: MessageFlags.Ephemeral });
+        }
+      }
 
     } else if (sub === "logs") {
       const modlog = interaction.options.getChannel("modlog");
@@ -279,6 +347,13 @@ export const setupCommand = {
         .setColor(0x5865f2)
         .addFields(
           { name: "Welcome Channel", value: cfg.welcomeChannelId ? `<#${cfg.welcomeChannelId}>` : "Not set", inline: true },
+          { name: "Welcome Background", value: cfg.welcomeBackgroundUrl ? "Custom URL set" : "Default", inline: true },
+          { name: "Welcome Accent", value: cfg.welcomeAccentColor ?? "#9b59b6", inline: true },
+          { name: "Welcome Card", value: [
+            cfg.welcomeShowAvatar !== false ? "avatar" : null,
+            cfg.welcomeShowServerIcon !== false ? "server icon" : null,
+            cfg.welcomeShowMemberCount !== false ? "member count" : null,
+          ].filter(Boolean).join(", ") || "text only", inline: true },
           { name: "Mod Log", value: cfg.modLogChannelId ? `<#${cfg.modLogChannelId}>` : "Not set", inline: true },
           { name: "ModMail Forum", value: cfg.modmailForumId ? `<#${cfg.modmailForumId}>` : "Not set", inline: true },
           { name: "Mod Role", value: cfg.modRoleId ? `<@&${cfg.modRoleId}>` : "Not set", inline: true },

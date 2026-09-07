@@ -1,0 +1,122 @@
+2026-09-07T10:27:15.930174225Z [inf]  Fetching latest yt-dlp...
+2026-09-07T10:27:16.331745790Z [inf]  yt-dlp updated: 2026.08.19
+2026-09-07T10:27:16.443620350Z [inf]  Starting Container
+2026-09-07T10:27:16.592753157Z [inf]  Server listening
+2026-09-07T10:27:16.592756597Z [err]  (node:1) Warning: SECURITY WARNING: The SSL modes 'prefer', 'require', and 'verify-ca' are treated as aliases for 'verify-full'.
+2026-09-07T10:27:16.592760427Z [err]  In the next major version (pg-connection-string v3.0.0 and pg v9.0.0), these modes will adopt standard libpq semantics, which have weaker security guarantees.
+2026-09-07T10:27:16.592765237Z [err]  
+2026-09-07T10:27:16.592768717Z [err]  To prepare for this change:
+2026-09-07T10:27:16.592772226Z [err]  - If you want the current behavior, explicitly use 'sslmode=verify-full'
+2026-09-07T10:27:16.592776656Z [err]  - If you want libpq compatibility now, use 'uselibpqcompat=true&sslmode=require'
+2026-09-07T10:27:16.592780566Z [err]  
+2026-09-07T10:27:16.592784046Z [err]  See https://www.postgresql.org/docs/current/libpq-ssl.html for libpq SSL mode definitions.
+2026-09-07T10:27:16.592786856Z [err]  (Use `node --trace-warnings ...` to show where the warning was created)
+2026-09-07T10:27:16.629627633Z [inf]  Database tables created/verified
+2026-09-07T10:27:17.243768443Z [inf]  yt-dlp is available
+2026-09-07T10:27:17.534807119Z [inf]  Discord bot logged in
+2026-09-07T10:27:17.553384371Z [inf]  Bot is ready
+2026-09-07T10:27:17.558030138Z [inf]    'volume',     'loop',         'shuffle',       'remove',
+2026-09-07T10:27:17.558041708Z [inf]    'disconnect', 'playlist',     '8ball',         'coinflip',
+2026-09-07T10:27:17.558047418Z [inf]    'dice',       'joke',         'poll',          'serverinfo',
+2026-09-07T10:27:17.558051708Z [inf]    'userinfo',   'ship',         'rps',           'wyr',
+2026-09-07T10:27:17.558055448Z [inf]  Loaded commands: [
+2026-09-07T10:27:17.558056388Z [inf]    'hack',       'roast',        'pp',            'meme',
+2026-09-07T10:27:17.558061208Z [inf]    'trivia',     'afk',          'rank',          'leaderboard',
+2026-09-07T10:27:17.558065328Z [inf]    'ban',        'kick',         'mute',          'unmute',
+2026-09-07T10:27:17.558067498Z [inf]    'giveaway',   'reactionrole', 'backup',        'createroles',
+2026-09-07T10:27:17.558074428Z [inf]    'template',   'embed',        'help',          'invite',
+2026-09-07T10:27:17.558074888Z [inf]    'warn',       'warnings',     'clearwarnings', 'timeout',
+2026-09-07T10:27:17.558078678Z [inf]    'broadcast',  'guilds',       'guild',         'addlevel'
+2026-09-07T10:27:17.558086678Z [inf]    'untimeout',  'purge',        'unban',         'modlogs',
+2026-09-07T10:27:17.558086768Z [inf]    'security',   'automod',      'restart',       'ping',
+2026-09-07T10:27:17.558087928Z [inf]  ]
+2026-09-07T10:27:17.558094108Z [inf]    'botinfo',    'bug',          'say',           'dm',
+2026-09-07T10:27:17.558098498Z [inf]    'role',       'role-all',     'slowmode',      'lock',
+2026-09-07T10:27:17.558100868Z [inf]    'setstatus',  'globalban',    'botname',       'botavatar',
+2026-09-07T10:27:17.558104188Z [inf]    'unlock',     'announce',     'nick',          'snipe',
+2026-09-07T10:27:17.558107818Z [inf]    'move',       'suggest',      'remindme',      'setup',
+2026-09-07T10:27:17.558113028Z [inf]    'ticket',     'modmail',      'bugreport',     'playerreport',
+2026-09-07T10:27:17.558118428Z [inf]    'support',    'play',         'pause',         'resume',
+2026-09-07T10:27:17.558124127Z [inf]    'skip',       'stop',         'queue',         'nowplaying',
+2026-09-07T10:27:17.856543446Z [inf]  Slash commands registered globally
+2026-09-07T10:27:30.586585845Z [inf]  Stopping Container
+2026-09-07T10:28:07.879004412Z [inf]  Resolved cookies file
+2026-09-07T10:28:07.879008242Z [inf]  Starting yt-dlp music search
+2026-09-07T10:28:07.879012352Z [inf]  Search complete
+2026-09-07T10:28:07.879016142Z [inf]  Search query: hallo allemaal dankjewel
+2026-09-07T10:28:07.879020942Z [inf]  Songs found: [
+2026-09-07T10:28:07.879024362Z [inf]    {
+2026-09-07T10:28:07.879028432Z [inf]      title: 'hallo allemaal dankjewel',
+2026-09-07T10:28:07.879032912Z [inf]      url: 'ytsearch1:hallo allemaal dankjewel',
+2026-09-07T10:28:07.879036472Z [inf]      duration: '0:00',
+2026-09-07T10:28:07.879039792Z [inf]      thumbnail: '',
+2026-09-07T10:28:07.879043462Z [inf]      requestedBy: '',
+2026-09-07T10:28:07.879047782Z [inf]      requestedById: ''
+2026-09-07T10:28:07.879052012Z [inf]    }
+2026-09-07T10:28:07.879056942Z [inf]  ]
+2026-09-07T10:28:07.879060861Z [inf]  Resolved cookies file
+2026-09-07T10:28:08.334649842Z [inf]  yt-dlp stderr (stream)
+2026-09-07T10:28:08.334652132Z [inf]  yt-dlp stderr (stream)
+2026-09-07T10:28:08.598283018Z [inf]  yt-dlp stderr (stream)
+2026-09-07T10:28:08.790930546Z [inf]  yt-dlp stderr (stream)
+2026-09-07T10:28:08.790937366Z [inf]  yt-dlp stderr (stream)
+2026-09-07T10:28:08.790942826Z [inf]  yt-dlp stderr (stream)
+2026-09-07T10:28:08.790946926Z [inf]  yt-dlp stderr (stream)
+2026-09-07T10:28:10.060912963Z [inf]  yt-dlp stderr (stream)
+2026-09-07T10:28:10.060916723Z [inf]  yt-dlp stderr (stream)
+2026-09-07T10:28:10.060919433Z [inf]  yt-dlp stderr (stream)
+2026-09-07T10:28:10.130322137Z [inf]  FFmpeg stderr (stream)
+2026-09-07T10:28:15.980942520Z [inf]  Resolved cookies file
+2026-09-07T10:28:15.980947310Z [inf]  Starting yt-dlp music search
+2026-09-07T10:28:17.177601502Z [inf]  Search complete
+2026-09-07T10:28:17.177605832Z [inf]  Search query: gods plan
+2026-09-07T10:28:17.177608972Z [inf]  Songs found: [
+2026-09-07T10:28:17.177613512Z [inf]    {
+2026-09-07T10:28:17.177616502Z [inf]      title: 'gods plan',
+2026-09-07T10:28:17.177619282Z [inf]      url: 'ytsearch1:gods plan',
+2026-09-07T10:28:17.177621772Z [inf]      duration: '0:00',
+2026-09-07T10:28:17.177625032Z [inf]      thumbnail: '',
+2026-09-07T10:28:17.177627352Z [inf]      requestedBy: '',
+2026-09-07T10:28:17.177629812Z [inf]      requestedById: ''
+2026-09-07T10:28:17.177632302Z [inf]    }
+2026-09-07T10:28:17.177634692Z [inf]  ]
+2026-09-07T10:28:17.878071280Z [inf]  Resolved cookies file
+2026-09-07T10:28:18.461319277Z [inf]  yt-dlp stderr (stream)
+2026-09-07T10:28:18.461321937Z [inf]  yt-dlp stderr (stream)
+2026-09-07T10:28:18.461324657Z [inf]  yt-dlp stderr (stream)
+2026-09-07T10:28:18.639255379Z [inf]  yt-dlp stderr (stream)
+2026-09-07T10:28:19.002706283Z [inf]  yt-dlp stderr (stream)
+2026-09-07T10:28:19.002714693Z [inf]  yt-dlp stderr (stream)
+2026-09-07T10:28:19.002720653Z [inf]  yt-dlp stderr (stream)
+2026-09-07T10:28:19.002725523Z [inf]  yt-dlp stderr (stream)
+2026-09-07T10:28:19.975633569Z [inf]  yt-dlp stderr (stream)
+2026-09-07T10:28:20.029646611Z [inf]  yt-dlp stderr (stream)
+2026-09-07T10:28:20.029651241Z [inf]  yt-dlp stderr (stream)
+2026-09-07T10:28:20.163868538Z [inf]  FFmpeg stderr (stream)
+2026-09-07T10:28:26.854970376Z [inf]  Resolved cookies file
+2026-09-07T10:28:26.855316353Z [inf]  Starting yt-dlp music search
+2026-09-07T10:28:28.147983940Z [inf]  Search complete
+2026-09-07T10:28:28.147986349Z [inf]  Search query: gods plan
+2026-09-07T10:28:28.147988919Z [inf]  Songs found: [
+2026-09-07T10:28:28.147991719Z [inf]    {
+2026-09-07T10:28:28.147994289Z [inf]      title: 'gods plan',
+2026-09-07T10:28:28.147996659Z [inf]      url: 'ytsearch1:gods plan',
+2026-09-07T10:28:28.147999149Z [inf]      duration: '0:00',
+2026-09-07T10:28:28.148001299Z [inf]      thumbnail: '',
+2026-09-07T10:28:28.148007519Z [inf]      requestedBy: '',
+2026-09-07T10:28:28.148010109Z [inf]      requestedById: ''
+2026-09-07T10:28:28.148013849Z [inf]    }
+2026-09-07T10:28:28.148017329Z [inf]  ]
+2026-09-07T10:28:28.982430688Z [inf]  Resolved cookies file
+2026-09-07T10:28:29.538821919Z [inf]  yt-dlp stderr (stream)
+2026-09-07T10:28:29.538830429Z [inf]  yt-dlp stderr (stream)
+2026-09-07T10:28:29.538835739Z [inf]  yt-dlp stderr (stream)
+2026-09-07T10:28:29.672248844Z [inf]  yt-dlp stderr (stream)
+2026-09-07T10:28:30.003367571Z [inf]  yt-dlp stderr (stream)
+2026-09-07T10:28:30.003370661Z [inf]  yt-dlp stderr (stream)
+2026-09-07T10:28:30.003373371Z [inf]  yt-dlp stderr (stream)
+2026-09-07T10:28:30.003375921Z [inf]  yt-dlp stderr (stream)
+2026-09-07T10:28:30.964917631Z [inf]  yt-dlp stderr (stream)
+2026-09-07T10:28:30.964921541Z [inf]  yt-dlp stderr (stream)
+2026-09-07T10:28:30.964925391Z [inf]  yt-dlp stderr (stream)
+2026-09-07T10:28:30.983157986Z [inf]  FFmpeg stderr (stream)
