@@ -16,10 +16,24 @@ import { Readable } from "stream";
 import { existsSync, writeFileSync } from "fs";
 import path from "path";
 import { fileURLToPath } from "url";
+import { createRequire } from "module";
 import { musicEmbed } from "./embeds.js";
 import { logger } from "../../lib/logger.js";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
+const require = createRequire(import.meta.url);
+
+// Prefer the bundled FFmpeg binary when available, with an environment/path
+// override for Railway and other deployments that provide system FFmpeg.
+const FFMPEG_PATH =
+  process.env.FFMPEG_PATH ||
+  (() => {
+    try {
+      return (require("ffmpeg-static") as string | null) || "ffmpeg";
+    } catch {
+      return "ffmpeg";
+    }
+  })();
 
 /**
  * yt-dlp binary resolution.
@@ -264,7 +278,7 @@ function spawnYtDlp(args: string[]) {
 function createYtDlpStream(url: string): Readable {
   const proc = spawnYtDlp([
     "-f",
-    "bestaudio/best",
+    "bestaudio[acodec=opus]/bestaudio/best",
     "-o",
     "-",
     "--no-playlist",
@@ -282,7 +296,44 @@ function createYtDlpStream(url: string): Readable {
     logger.warn({ ytdlp: chunk.toString().trim() }, "yt-dlp stderr (stream)");
   });
 
-  return proc.stdout as Readable;
+  // Decode every source to Discord's native voice format. Passing WebM/M4A
+  // containers directly as Arbitrary input makes quality depend on whichever
+  // format YouTube happened to return. FFmpeg gives us consistent 48 kHz,
+  // stereo PCM before @discordjs/voice performs the final Opus encode.
+  const ffmpeg = spawn(
+    FFMPEG_PATH,
+    [
+      "-hide_banner",
+      "-loglevel",
+      "error",
+      "-i",
+      "pipe:0",
+      "-vn",
+      "-f",
+      "s16le",
+      "-ar",
+      "48000",
+      "-ac",
+      "2",
+      "pipe:1",
+    ],
+    { stdio: ["pipe", "pipe", "pipe"] },
+  );
+
+  proc.stdout.pipe(ffmpeg.stdin);
+  ffmpeg.stderr.on("data", (chunk: Buffer) => {
+    logger.warn({ ffmpeg: chunk.toString().trim() }, "FFmpeg stderr (stream)");
+  });
+  ffmpeg.on("error", (err) => {
+    logger.error({ err, ffmpegPath: FFMPEG_PATH }, "FFmpeg spawn error");
+    proc.kill();
+  });
+  proc.on("error", (err) => {
+    logger.error({ err, ytdlpPath: YTDLP_PATH }, "yt-dlp stream error");
+    ffmpeg.kill();
+  });
+
+  return ffmpeg.stdout as Readable;
 }
 
 export async function searchSongs(query: string, limit = 5): Promise<Song[]> {
@@ -563,7 +614,7 @@ async function playNext(guildId: string): Promise<void> {
     const stream = createYtDlpStream(song.url);
 
     const resource = createAudioResource(stream, {
-      inputType: StreamType.Arbitrary,
+      inputType: StreamType.Raw,
       inlineVolume: true,
     });
     resource.volume?.setVolume(queue.volume / 100);

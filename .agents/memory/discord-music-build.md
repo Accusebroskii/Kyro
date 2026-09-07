@@ -12,6 +12,11 @@ The entire audio stack must be listed as esbuild externals in `build.mjs`:
 
 System FFmpeg is available in Replit NixOS at `/nix/store/.../bin/ffmpeg` — no need for `ffmpeg-static`.
 
+For consistent playback quality, select the best available audio source with yt-dlp,
+decode it through FFmpeg to 48 kHz stereo PCM, and pass it to
+`createAudioResource` as `StreamType.Raw`; direct `StreamType.Arbitrary` playback
+varies with the source container and codec.
+
 For the `Command` interface in discord.js v14 slash command registries, use duck typing:
 ```ts
 export interface Command {
