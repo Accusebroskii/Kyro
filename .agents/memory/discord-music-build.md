@@ -17,6 +17,15 @@ decode it through FFmpeg to 48 kHz stereo PCM, and pass it to
 `createAudioResource` as `StreamType.Raw`; direct `StreamType.Arbitrary` playback
 varies with the source container and codec.
 
+Search responses from `yt-dlp --dump-single-json --flat-playlist` must be mapped from
+`entries[]`; the top-level `webpage_url` can be the non-playable `ytsearch...` query.
+
+**Why:** Passing that search URI into the playback extractor produces an empty/failed
+stream, which makes the audio player become idle and the queue cleanup disconnect.
+
+**How to apply:** Require an `http(s)` video URL from an entry (or construct one from
+its video ID) before adding a result to the queue, and log yt-dlp/FFmpeg exit details.
+
 For the `Command` interface in discord.js v14 slash command registries, use duck typing:
 ```ts
 export interface Command {

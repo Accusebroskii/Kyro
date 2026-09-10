@@ -22,6 +22,7 @@ import { onMessageReactionRemove } from "./events/messageReactionRemove.js";
 import { logger } from "../lib/logger.js";
 import { ensureYtDlp } from "./lib/music.js";
 import { deliverDueReminders } from "./commands/utility.js";
+import { startStatsUpdater } from "./stats.js";
 
 export let botClient: Client | null = null;
 export const botStartTime = Date.now();
@@ -307,6 +308,7 @@ export async function startBot(): Promise<void> {
 
   const client = createBotClient();
   botClient = client;
+  startStatsUpdater(client);
 
   try {
     await client.login(token);
