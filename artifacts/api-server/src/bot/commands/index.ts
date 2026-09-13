@@ -82,6 +82,7 @@ import { embedCommand } from "./embed.js";
 import { templateCommand } from "./template.js";
 import { automodCommand } from "./automod.js";
 import { guildCommand } from "./guild.js";
+import { aiCommand } from "./ai.js";
 
 import {
   restartCommand,
@@ -220,6 +221,7 @@ const ALL_COMMANDS: Command[] = [
   guildsCommand,
   guildCommand,
   addlevelCommand,
+  aiCommand,
 ];
 
 const commandMap = new Map<string, Command>(
