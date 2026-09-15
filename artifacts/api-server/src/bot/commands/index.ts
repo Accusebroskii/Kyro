@@ -109,6 +109,8 @@ export interface Command {
 }
 
 const ALL_COMMANDS: Command[] = [
+  // Fortnite
+  fortniteCommand,
   // Moderation
   banCommand,
   kickCommand,
