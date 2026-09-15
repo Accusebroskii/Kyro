@@ -146,6 +146,82 @@ export const jokeCommand = {
   },
 };
 
+// ─── /cat and /dog ────────────────────────────────────────────────────────────
+async function fetchAnimalImage(kind: "cat" | "dog"): Promise<string> {
+  const endpoint =
+    kind === "cat"
+      ? "https://api.thecatapi.com/v1/images/search"
+      : "https://dog.ceo/api/breeds/image/random";
+  const response = await fetch(endpoint);
+
+  if (!response.ok) {
+    throw new Error(`${kind} image API returned ${response.status}`);
+  }
+
+  const data = (await response.json()) as
+    | Array<{ url?: unknown }>
+    | { message?: unknown };
+  const imageUrl =
+    kind === "cat"
+      ? (data as Array<{ url?: unknown }>)[0]?.url
+      : (data as { message?: unknown }).message;
+
+  if (typeof imageUrl !== "string" || !/^https?:\/\//i.test(imageUrl)) {
+    throw new Error(`The ${kind} image API returned an invalid image URL`);
+  }
+
+  return imageUrl;
+}
+
+async function sendAnimalImage(
+  interaction: ChatInputCommandInteraction,
+  kind: "cat" | "dog",
+): Promise<void> {
+  await interaction.deferReply();
+
+  try {
+    const imageUrl = await fetchAnimalImage(kind);
+    const label = kind === "cat" ? "kitten" : "puppy";
+    const emoji = kind === "cat" ? "🐱" : "🐶";
+    const embed = new EmbedBuilder()
+      .setTitle(`${emoji} Here's a ${label}!`)
+      .setColor(kind === "cat" ? 0xff9f43 : 0x8d6e63)
+      .setImage(imageUrl)
+      .setFooter({ text: "Powered by a random animal image" })
+      .setTimestamp();
+
+    await interaction.editReply({ embeds: [embed] });
+  } catch (err) {
+    logger.warn({ err, kind }, `Failed to fetch ${kind} image`);
+    await interaction.editReply({
+      embeds: [
+        infoEmbed(
+          `${kind === "cat" ? "🐱" : "🐶"} Image unavailable`,
+          `I couldn't fetch a ${kind} picture right now. Please try again in a moment.`,
+        ),
+      ],
+    });
+  }
+}
+
+export const catCommand = {
+  data: new SlashCommandBuilder()
+    .setName("cat")
+    .setDescription("Show a random kitten picture"),
+  async execute(interaction: ChatInputCommandInteraction) {
+    await sendAnimalImage(interaction, "cat");
+  },
+};
+
+export const dogCommand = {
+  data: new SlashCommandBuilder()
+    .setName("dog")
+    .setDescription("Show a random puppy picture"),
+  async execute(interaction: ChatInputCommandInteraction) {
+    await sendAnimalImage(interaction, "dog");
+  },
+};
+
 // ─── /poll ────────────────────────────────────────────────────────────────────
 export const pollCommand = {
   data: new SlashCommandBuilder()

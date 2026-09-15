@@ -163,6 +163,8 @@ const COMMAND_CATEGORIES: Record<
       { name: "/coinflip", description: "Flip a coin" },
       { name: "/dice", description: "Roll customizable dice" },
       { name: "/joke", description: "Get a random joke" },
+      { name: "/cat", description: "Show a random kitten picture" },
+      { name: "/dog", description: "Show a random puppy picture" },
       { name: "/poll", description: "Create a quick reaction poll" },
       {
         name: "/serverinfo",

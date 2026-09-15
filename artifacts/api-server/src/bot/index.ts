@@ -318,5 +318,5 @@ export async function startBot(): Promise<void> {
   } catch (err) {
     logger.error({ err }, "Failed to login to Discord");
     throw err;
-  }
 }
+  }
