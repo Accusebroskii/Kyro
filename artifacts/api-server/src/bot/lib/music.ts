@@ -201,9 +201,80 @@ function createYtDlpStream(url: string): PassThrough {
   return output;
 }
 
+async function getSpotifyToken(): Promise<string> {
+  const clientId = process.env.SPOTIFY_CLIENT_ID;
+  const clientSecret = process.env.SPOTIFY_CLIENT_SECRET;
+
+  if (!clientId || !clientSecret) {
+    throw new Error("Spotify credentials are not configured");
+  }
+
+  const credentials = Buffer.from(`${clientId}:${clientSecret}`).toString("base64");
+
+  const response = await fetch("https://accounts.spotify.com/api/token", {
+    method: "POST",
+    headers: {
+      Authorization: `Basic ${credentials}`,
+      "Content-Type": "application/x-www-form-urlencoded",
+    },
+    body: "grant_type=client_credentials",
+  });
+
+  if (!response.ok) {
+    throw new Error(`Spotify authentication failed: ${response.status}`);
+  }
+
+  const data = (await response.json()) as { access_token?: string };
+
+  if (!data.access_token) {
+    throw new Error("Spotify did not return an access token");
+  }
+
+  return data.access_token;
+}
+
+function getSpotifyTrackId(url: string): string | null {
+  const match = url.match(/open\.spotify\.com\/track\/([A-Za-z0-9]+)/);
+  return match?.[1] ?? null;
+}
+
+async function searchSpotifyTrack(url: string): Promise<Song[]> {
+  const trackId = getSpotifyTrackId(url);
+  if (!trackId) return [];
+
+  const token = await getSpotifyToken();
+
+  const response = await fetch(
+    `https://api.spotify.com/v1/tracks/${trackId}`,
+    {
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+    },
+  );
+
+  if (!response.ok) {
+    throw new Error(`Spotify track lookup failed: ${response.status}`);
+  }
+
+  const track = (await response.json()) as {
+    name: string;
+    artists: Array<{ name: string }>;
+  };
+
+  const searchQuery = `${track.artists.map((artist) => artist.name).join(", ")} - ${track.name}`;
+
+  return searchSongs(searchQuery, 1);
+}
+
 export async function searchSongs(query: string, limit = 5): Promise<Song[]> {
   try {
     const value = query.trim();
+
+    if (/open\.spotify\.com\/track\//i.test(value)) {
+      return await searchSpotifyTrack(value);
+    }
+
     const isUrl = /^https?:\/\//i.test(value);
     const result = await new Promise<{ stdout: string; stderr: string; code: number | null }>(
       (resolve, reject) => {
