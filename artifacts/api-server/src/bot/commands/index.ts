@@ -1,3 +1,4 @@
+import { fortniteCommand } from "./fortnite.js";
 import { type ChatInputCommandInteraction } from "discord.js";
 
 import {
