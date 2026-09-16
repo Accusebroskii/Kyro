@@ -6,11 +6,12 @@ import {
   StringSelectMenuInteraction,
   ChannelSelectMenuInteraction,
   TextChannel,
+  EmbedBuilder,
 } from "discord.js";
 
 import { getCommand } from "../commands/index.js";
 import { db, ticketsTable, guildConfigTable } from "@workspace/db";
-import { eq } from "drizzle-orm";
+import { eq, and } from "drizzle-orm";
 import { logger } from "../../lib/logger.js";
 import { successEmbed, errorEmbed } from "../lib/embeds.js";
 
@@ -251,6 +252,119 @@ export async function onInteractionCreate(interaction: Interaction): Promise<voi
 
       if (btn.customId.startsWith("ticket_create:")) {
         return await handleTicketCreate(btn);
+      }
+
+      if (btn.customId.startsWith("partnership_accept:")) {
+        if (!btn.memberPermissions?.has("ManageGuild")) {
+          await btn.reply({ content: "❌ You need **Manage Server** permission.", flags: 64 });
+          return;
+        }
+
+        const applicantId = btn.customId.split(":")[1];
+
+        const [config] = await db
+          .select()
+          .from(guildConfigTable)
+          .where(eq(guildConfigTable.guildId, btn.guildId!))
+          .limit(1);
+
+        if (!config?.partnershipChannelId) {
+          await btn.reply({ content: "❌ The partnership channel is not configured.", flags: 64 });
+          return;
+        }
+
+        const channel = await btn.guild!.channels.fetch(config.partnershipChannelId).catch(() => null);
+        if (!channel?.isTextBased()) {
+          await btn.reply({ content: "❌ The partnership channel could not be found.", flags: 64 });
+          return;
+        }
+
+        const applicationMessage = btn.message;
+        const applicationEmbed = applicationMessage.embeds[0];
+
+        const adField = applicationEmbed?.fields.find(
+          (field) => field.name.includes("Partnership Ad")
+        );
+
+        if (!adField) {
+          await btn.reply({ content: "❌ No partnership ad was found.", flags: 64 });
+          return;
+        }
+
+        await channel.send({
+          content: `🤝 **New Calyx Partner**
+<@${applicantId}>`,
+          embeds: [
+            new EmbedBuilder()
+              .setTitle("🤝 Partnership")
+              .setDescription(adField.value)
+              .setTimestamp()
+              .setFooter({ text: "Calyx Partnerships" }),
+          ],
+        });
+
+        await btn.update({
+          content: "✅ **Partnership accepted**",
+          components: [],
+        });
+
+        const ticket = await db
+          .select()
+          .from(ticketsTable)
+          .where(
+            and(
+              eq(ticketsTable.guildId, btn.guildId!),
+              eq(ticketsTable.userId, applicantId),
+              eq(ticketsTable.status, "open"),
+            ),
+          )
+          .limit(1);
+
+        if (ticket[0]) {
+          const ticketChannel = btn.guild!.channels.cache.get(ticket[0].channelId);
+          if (ticketChannel?.isTextBased()) {
+            await ticketChannel.send(
+              "✅ **Your partnership has been accepted!**\n\nYour server ad has been posted in the partnership channel."
+            );
+          }
+        }
+        return;
+      }
+
+      if (btn.customId.startsWith("partnership_deny:")) {
+        if (!btn.memberPermissions?.has("ManageGuild")) {
+          await btn.reply({ content: "❌ You need **Manage Server** permission.", flags: 64 });
+          return;
+        }
+
+        await btn.update({
+          content: "❌ **Partnership denied**",
+          components: [],
+        });
+
+        const applicantId = btn.customId.split(":")[1];
+
+        const ticket = await db
+          .select()
+          .from(ticketsTable)
+          .where(
+            and(
+              eq(ticketsTable.guildId, btn.guildId!),
+              eq(ticketsTable.userId, applicantId),
+              eq(ticketsTable.status, "open"),
+            ),
+          )
+          .limit(1);
+
+        if (ticket[0]) {
+          const ticketChannel = btn.guild!.channels.cache.get(ticket[0].channelId);
+          if (ticketChannel?.isTextBased()) {
+            await ticketChannel.send(
+              "❌ **Your partnership application was denied.**\n\nThis ticket will be closed by staff."
+            );
+          }
+        }
+        return;
       }
 
       if (btn.customId.startsWith("ticket_close_")) {

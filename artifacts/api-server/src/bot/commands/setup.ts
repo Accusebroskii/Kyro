@@ -155,10 +155,16 @@ export const setupCommand = {
     )
     .addSubcommand((s) =>
       s.setName("partnership")
-        .setDescription("Configure the partnership application channel")
+        .setDescription("Configure the partnership system")
         .addChannelOption((o) =>
-          o.setName("channel")
-            .setDescription("Channel where partnership applications are sent")
+          o.setName("review_channel")
+            .setDescription("Channel where partnership ads are reviewed")
+            .setRequired(true)
+            .addChannelTypes(ChannelType.GuildText)
+        )
+        .addChannelOption((o) =>
+          o.setName("partnership_channel")
+            .setDescription("Channel where accepted partnership ads are posted")
             .setRequired(true)
             .addChannelTypes(ChannelType.GuildText)
         ),
@@ -552,17 +558,21 @@ export const setupCommand = {
       const [cfg] = await db.select().from(guildConfigTable).where(eq(guildConfigTable.guildId, guildId)).limit(1);
       await interaction.reply({ embeds: [successEmbed("Starboard Configured", `Channel: ${cfg?.starboardChannelId ? `<#${cfg.starboardChannelId}>` : "Not set"}\nThreshold: **${cfg?.starboardThreshold ?? 3} ⭐** to get on the board`)] });
       } else if (sub === "partnership") {
-      const channel = interaction.options.getChannel("channel", true);
+      const reviewChannel = interaction.options.getChannel("review_channel", true);
+      const partnershipChannel = interaction.options.getChannel("partnership_channel", true);
 
       await db.update(guildConfigTable)
-        .set({ partnershipChannelId: channel.id })
+        .set({
+          partnershipReviewChannelId: reviewChannel.id,
+          partnershipChannelId: partnershipChannel.id,
+        })
         .where(eq(guildConfigTable.guildId, guildId));
 
       await interaction.reply({
         embeds: [
           successEmbed(
             "Partnership System",
-            `Partnership applications will now be sent to <#${channel.id}>.`,
+            `Review Channel: <#${reviewChannel.id}>\nPartnership Channel: <#${partnershipChannel.id}>`,
           ),
         ],
       });

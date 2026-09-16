@@ -49,6 +49,7 @@ export const guildConfigTable = pgTable("guild_config", {
   suggestionsChannelId: text("suggestions_channel_id"),
   // Partnership system
   partnershipChannelId: text("partnership_channel_id"),
+  partnershipReviewChannelId: text("partnership_review_channel_id"),
   // Starboard
   starboardChannelId: text("starboard_channel_id"),
   starboardThreshold: integer("starboard_threshold").notNull().default(3),
