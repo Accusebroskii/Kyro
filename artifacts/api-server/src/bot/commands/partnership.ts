@@ -48,7 +48,7 @@ export const partnershipCommand = {
             .setName("description")
             .setDescription("Tell us about your server")
             .setRequired(true)
-            .setMaxLength(1000),
+            .setMaxLength(10000),
         )
         .addStringOption((o) =>
           o

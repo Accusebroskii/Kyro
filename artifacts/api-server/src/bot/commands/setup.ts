@@ -172,7 +172,7 @@ export const setupCommand = {
           o.setName("ad")
             .setDescription("The server partnership ad")
             .setRequired(true)
-            .setMaxLength(2000)
+            .setMaxLength(20000)
         ),
     )
     .addSubcommand((s) =>
