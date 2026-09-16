@@ -38,7 +38,6 @@ export const partnershipCommand = {
           o.setName("contact").setDescription("Owner or contact information").setRequired(true).setMaxLength(100),
         )
         .addStringOption((o) =>
-          o.setName("ad").setDescription("Your server partnership ad").setRequired(true).setMaxLength(2000),
         ),
     )
     .addSubcommand((s) =>
@@ -102,7 +101,15 @@ export const partnershipCommand = {
       const members = interaction.options.getString("members", true);
       const description = interaction.options.getString("description", true);
       const contact = interaction.options.getString("contact", true);
-      const ad = interaction.options.getString("ad", true);
+      const ad = config.partnershipAd;
+
+      if (!ad) {
+        await interaction.reply({
+          content: "❌ No partnership ad has been configured. Please ask an administrator to run `/setup partnership` again and provide an ad.",
+          flags: MessageFlags.Ephemeral,
+        });
+        return;
+      }
 
       const embed = new EmbedBuilder()
         .setTitle("🤝 New Partnership Application")
@@ -157,8 +164,8 @@ export const partnershipCommand = {
             .setDescription(
               "Your partnership ticket has been created.\n\n" +
               "Please wait while a staff member reviews your application.\n\n" +
-              "📢 **After a staff member accepts your partnership, send your server ad here.**\n" +
-              "The ad will then be posted in the configured partnership channel.",
+              "📢 **Your configured server ad has been saved.**\n" +
+              "After your partnership is accepted, Calyx will automatically post the ad in the configured partnership channel.",
             )
             .setTimestamp(),
         ],

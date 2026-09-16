@@ -167,6 +167,12 @@ export const setupCommand = {
             .setDescription("Channel where accepted partnership ads are posted")
             .setRequired(true)
             .addChannelTypes(ChannelType.GuildText)
+        )
+        .addStringOption((o) =>
+          o.setName("ad")
+            .setDescription("The server partnership ad")
+            .setRequired(true)
+            .setMaxLength(2000)
         ),
     )
     .addSubcommand((s) =>
@@ -560,11 +566,13 @@ export const setupCommand = {
       } else if (sub === "partnership") {
       const reviewChannel = interaction.options.getChannel("review_channel", true);
       const partnershipChannel = interaction.options.getChannel("partnership_channel", true);
+      const ad = interaction.options.getString("ad", true);
 
       await db.update(guildConfigTable)
         .set({
           partnershipReviewChannelId: reviewChannel.id,
           partnershipChannelId: partnershipChannel.id,
+          partnershipAd: ad,
         })
         .where(eq(guildConfigTable.guildId, guildId));
 
