@@ -23,21 +23,39 @@ export const partnershipCommand = {
         .setName("apply")
         .setDescription("Apply for a partnership")
         .addStringOption((o) =>
-          o.setName("server").setDescription("Your server name").setRequired(true).setMaxLength(100),
+          o
+            .setName("server")
+            .setDescription("Your server name")
+            .setRequired(true)
+            .setMaxLength(100),
         )
         .addStringOption((o) =>
-          o.setName("invite").setDescription("Your Discord server invite").setRequired(true).setMaxLength(200),
+          o
+            .setName("invite")
+            .setDescription("Your Discord server invite")
+            .setRequired(true)
+            .setMaxLength(200),
         )
         .addStringOption((o) =>
-          o.setName("members").setDescription("Your server member count").setRequired(true).setMaxLength(20),
+          o
+            .setName("members")
+            .setDescription("Your server member count")
+            .setRequired(true)
+            .setMaxLength(20),
         )
         .addStringOption((o) =>
-          o.setName("description").setDescription("Tell us about your server").setRequired(true).setMaxLength(1000),
+          o
+            .setName("description")
+            .setDescription("Tell us about your server")
+            .setRequired(true)
+            .setMaxLength(1000),
         )
         .addStringOption((o) =>
-          o.setName("contact").setDescription("Owner or contact information").setRequired(true).setMaxLength(100),
-        )
-        .addStringOption((o) =>
+          o
+            .setName("contact")
+            .setDescription("Owner or contact information")
+            .setRequired(true)
+            .setMaxLength(100),
         ),
     )
     .addSubcommand((s) =>
@@ -47,12 +65,7 @@ export const partnershipCommand = {
       s.setName("list").setDescription("View current partners"),
     )
     .addSubcommand((s) =>
-      s
-        .setName("remove")
-        .setDescription("Remove a partner")
-        .addStringOption((o) =>
-          o.setName("server").setDescription("Server name").setRequired(true),
-        ),
+      s.setName("remove").setDescription("Remove a partner"),
     ),
 
   async execute(interaction: ChatInputCommandInteraction): Promise<void> {
