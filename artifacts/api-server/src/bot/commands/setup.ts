@@ -154,6 +154,16 @@ export const setupCommand = {
         .addBooleanOption((o) => o.setName("disable").setDescription("Disable the starboard")),
     )
     .addSubcommand((s) =>
+      s.setName("partnership")
+        .setDescription("Configure the partnership application channel")
+        .addChannelOption((o) =>
+          o.setName("channel")
+            .setDescription("Channel where partnership applications are sent")
+            .setRequired(true)
+            .addChannelTypes(ChannelType.GuildText)
+        ),
+    )
+    .addSubcommand((s) =>
       s.setName("counting")
         .setDescription("Set up the counting channel")
         .addChannelOption((o) =>
@@ -541,7 +551,23 @@ export const setupCommand = {
       }).where(eq(guildConfigTable.guildId, guildId));
       const [cfg] = await db.select().from(guildConfigTable).where(eq(guildConfigTable.guildId, guildId)).limit(1);
       await interaction.reply({ embeds: [successEmbed("Starboard Configured", `Channel: ${cfg?.starboardChannelId ? `<#${cfg.starboardChannelId}>` : "Not set"}\nThreshold: **${cfg?.starboardThreshold ?? 3} ⭐** to get on the board`)] });
-      } else if (sub === "counting") {
+      } else if (sub === "partnership") {
+      const channel = interaction.options.getChannel("channel", true);
+
+      await db.update(guildConfigTable)
+        .set({ partnershipChannelId: channel.id })
+        .where(eq(guildConfigTable.guildId, guildId));
+
+      await interaction.reply({
+        embeds: [
+          successEmbed(
+            "Partnership System",
+            `Partnership applications will now be sent to <#${channel.id}>.`,
+          ),
+        ],
+      });
+
+    } else if (sub === "counting") {
         const channel = interaction.options.getChannel("channel", true);
 
         await db.update(guildConfigTable).set({
