@@ -160,27 +160,27 @@ export const partnershipCommand = {
         .addFields(
           {
             name: "Server",
-            value: server,
+            value: server.slice(0, 1024),
             inline: true,
           },
           {
             name: "Members",
-            value: members,
+            value: members.slice(0, 1024),
             inline: true,
           },
           {
             name: "Invite",
-            value: invite,
+            value: invite.slice(0, 1024),
             inline: false,
           },
           {
             name: "Description",
-            value: description,
+            value: description.slice(0, 1024),
             inline: false,
           },
           {
             name: "Contact",
-            value: contact,
+            value: contact.slice(0, 1024),
             inline: false,
           },
         )
