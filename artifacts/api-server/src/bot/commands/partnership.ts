@@ -128,9 +128,9 @@ export const partnershipCommand = {
         .where(eq(guildConfigTable.guildId, guildId))
         .limit(1);
 
-      const partnershipChannelId = config[0]?.partnershipChannelId;
+      const partnershipReviewChannelId = config[0]?.partnershipReviewChannelId;
 
-      if (!partnershipChannelId) {
+      if (!partnershipReviewChannelId) {
         await interaction.reply({
           content:
             "❌ The partnership system has not been configured yet. An administrator needs to run `/setup partnership` first.",
@@ -140,13 +140,13 @@ export const partnershipCommand = {
       }
 
       const channel = await interaction.guild.channels
-        .fetch(partnershipChannelId)
+        .fetch(partnershipReviewChannelId)
         .catch(() => null);
 
       if (!channel || !(channel instanceof TextChannel)) {
         await interaction.reply({
           content:
-            "❌ The configured partnership channel could not be found. Please ask an administrator to run `/setup partnership` again.",
+            "❌ The configured partnership review channel could not be found. Please ask an administrator to run `/setup partnership` again.",
           flags: MessageFlags.Ephemeral,
         });
         return;
@@ -274,8 +274,50 @@ export const partnershipCommand = {
       const server = interaction.options.getString("server", true);
       const invite = interaction.options.getString("invite", true);
 
+      const config = await db
+        .select()
+        .from(guildConfigTable)
+        .where(eq(guildConfigTable.guildId, interaction.guildId!))
+        .limit(1);
+
+      const partnershipChannelId = config[0]?.partnershipChannelId;
+      const partnershipAd = config[0]?.partnershipAd;
+
+      if (!partnershipChannelId) {
+        await interaction.reply({
+          content: "❌ The partnership channel has not been configured yet.",
+          flags: MessageFlags.Ephemeral,
+        });
+        return;
+      }
+
+      const channel = await interaction.guild!.channels
+        .fetch(partnershipChannelId)
+        .catch(() => null);
+
+      if (!channel || !channel.isTextBased()) {
+        await interaction.reply({
+          content: "❌ The configured partnership channel could not be found.",
+          flags: MessageFlags.Ephemeral,
+        });
+        return;
+      }
+
+      const embed = new EmbedBuilder()
+        .setTitle("🤝 New Partnership")
+        .setDescription(
+          partnershipAd
+            ? `${partnershipAd}\n\n**Server:** ${server}\n**Invite:** ${invite}`
+            : `**Server:** ${server}\n**Invite:** ${invite}`,
+        )
+        .setTimestamp();
+
+      await channel.send({
+        embeds: [embed],
+      });
+
       await interaction.reply({
-        content: `✅ Partnership for **${server}** has been accepted.\n${invite}`,
+        content: `✅ Partnership for **${server}** has been accepted and posted.`,
         flags: MessageFlags.Ephemeral,
       });
 
