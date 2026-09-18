@@ -321,7 +321,7 @@ export async function onInteractionCreate(interaction: Interaction): Promise<voi
           .limit(1);
 
         if (ticket[0]) {
-          const ticketChannel = btn.guild!.channels.cache.get(ticket[0].channelId);
+          const ticketChannel = ticket[0].channelId ? btn.guild!.channels.cache.get(ticket[0].channelId) : null;
           if (ticketChannel?.isTextBased()) {
             await ticketChannel.send(
               "✅ **Your partnership has been accepted!**\n\nYour server ad has been posted in the partnership channel."
@@ -357,7 +357,7 @@ export async function onInteractionCreate(interaction: Interaction): Promise<voi
           .limit(1);
 
         if (ticket[0]) {
-          const ticketChannel = btn.guild!.channels.cache.get(ticket[0].channelId);
+          const ticketChannel = ticket[0].channelId ? btn.guild!.channels.cache.get(ticket[0].channelId) : null;
           if (ticketChannel?.isTextBased()) {
             await ticketChannel.send(
               "❌ **Your partnership application was denied.**\n\nThis ticket will be closed by staff."
