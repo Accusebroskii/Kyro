@@ -1,3 +1,4 @@
+
 import type { Client } from "discord.js";
 
 const STATS_URL =
