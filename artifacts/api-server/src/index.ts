@@ -2,6 +2,14 @@ import app from "./app.js";
 import { logger } from "./lib/logger.js";
 import { startBot } from "./bot/index.js";
 
+process.on("SIGTERM", () => {
+  console.log("[Calyx] Received SIGTERM");
+});
+
+process.on("SIGINT", () => {
+  console.log("[Calyx] Received SIGINT");
+});
+
 const rawPort = process.env["PORT"];
 
 if (!rawPort) {
