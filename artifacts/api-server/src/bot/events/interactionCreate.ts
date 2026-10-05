@@ -154,6 +154,16 @@ export async function onInteractionCreate(interaction: Interaction): Promise<voi
         await handleEmbedModalSubmit(interaction);
         return;
       }
+
+      if (interaction.customId === "template_create_modal") {
+        await handleTemplateModalSubmit(interaction);
+        return;
+      }
+
+      if (interaction.customId === "partnership_apply_modal") {
+        await handlePartnershipApplyModalSubmit(interaction);
+        return;
+      }
       if (interaction.customId === "verify_captcha_modal") {
         const member = interaction.member;
         if (!member || !("roles" in member)) {

@@ -5,6 +5,11 @@ import {
   EmbedBuilder,
   MessageFlags,
   TextChannel,
+  ModalSubmitInteraction,
+  ModalBuilder,
+  ActionRowBuilder,
+  TextInputBuilder,
+  TextInputStyle,
 } from "discord.js";
 import { db, guildConfigTable, ticketsTable } from "@workspace/db";
 import { eq, and } from "drizzle-orm";
@@ -30,14 +35,29 @@ async function getPartnershipData(channel: TextChannel) {
   const getField = (name: string) =>
     embed.fields.find((field) => field.name === name)?.value ?? "";
 
+  const advertisementMessages = messages
+    .filter(
+      (message) =>
+        message.author.id === message.client.user?.id &&
+        message.embeds.some(
+          (embed) =>
+            embed.title === "📢 Applicant Advertisement" ||
+            embed.title?.startsWith("📢 Applicant Advertisement ("),
+        ),
+    )
+    .sort((a, b) => a.createdTimestamp - b.createdTimestamp);
+
+  const advertisement = advertisementMessages
+    .map((message) => message.embeds[0]?.description ?? "")
+    .join("");
+
   return {
     applicantId: getField("Applicant ID"),
     server: getField("Server"),
     invite: getField("Invite"),
     members: getField("Members"),
-    description: getField("Description"),
     contact: getField("Contact"),
-    advertisement: getField("Advertisement"),
+    advertisement,
   };
 }
 
@@ -85,6 +105,155 @@ function resolveMention(
   };
 }
 
+export async function handlePartnershipApplyModalSubmit(
+  interaction: ModalSubmitInteraction,
+) {
+  if (!interaction.guildId || !interaction.guild) {
+    await interaction.reply({
+      content: "❌ This can only be used inside a server.",
+      flags: MessageFlags.Ephemeral,
+    });
+    return;
+  }
+
+  const server = interaction.fields.getTextInputValue("server");
+  const invite = interaction.fields.getTextInputValue("invite");
+  const members = interaction.fields.getTextInputValue("members");
+  const contact = interaction.fields.getTextInputValue("contact");
+  const advertisement = interaction.fields.getTextInputValue("advertisement");
+
+  const guildId = interaction.guildId;
+
+  const [config] = await db
+    .select()
+    .from(guildConfigTable)
+    .where(eq(guildConfigTable.guildId, guildId))
+    .limit(1);
+
+  if (!config?.partnershipChannelId || !config.partnershipReviewChannelId) {
+    await interaction.reply({
+      content:
+        "❌ The partnership system is not fully configured. An administrator needs to run `/setup partnership` first.",
+      flags: MessageFlags.Ephemeral,
+    });
+    return;
+  }
+
+  if (!config.partnershipAd) {
+    await interaction.reply({
+      content:
+        "❌ The partnership advertisement for this server has not been configured yet.",
+      flags: MessageFlags.Ephemeral,
+    });
+    return;
+  }
+
+  const existing = await db
+    .select()
+    .from(ticketsTable)
+    .where(
+      and(
+        eq(ticketsTable.guildId, guildId),
+        eq(ticketsTable.userId, interaction.user.id),
+        eq(ticketsTable.subject, "Partnership Application"),
+      ),
+    )
+    .limit(1);
+
+  if (existing[0]) {
+    const existingChannel = await interaction.guild.channels
+      .fetch(existing[0].channelId)
+      .catch(() => null);
+
+    if (existingChannel) {
+      await interaction.reply({
+        content: `❌ You already have a partnership ticket: <#${existing[0].channelId}>`,
+        flags: MessageFlags.Ephemeral,
+      });
+      return;
+    }
+  }
+
+  const ticket = await openTicket({
+    guildId,
+    guild: interaction.guild,
+    userId: interaction.user.id,
+    userTag: interaction.user.tag,
+    subject: "Partnership Application",
+  });
+
+  const ticketChannel = ticket.channel as TextChannel;
+
+  const calyxAd = new EmbedBuilder()
+    .setTitle("🤝 Partnership Advertisement")
+    .setDescription(config.partnershipAd)
+    .setColor(0x4f8cff);
+
+  await ticketChannel.send({
+    content:
+      `Welcome <@${interaction.user.id}>!\n\n` +
+      `Please send **proof that you sent our partnership advertisement in your partnership command**.\n\n` +
+      `📸 Upload a screenshot/image as proof below.\n\n` +
+      `Once your proof has been submitted, staff will review it.`,
+    embeds: [calyxAd],
+  });
+
+  const dataEmbed = new EmbedBuilder()
+    .setTitle("🤝 Partnership Application Data")
+    .setColor(0x4f8cff)
+    .addFields(
+      {
+        name: "Applicant ID",
+        value: interaction.user.id,
+      },
+      {
+        name: "Server",
+        value: server.slice(0, 1024),
+        inline: true,
+      },
+      {
+        name: "Members",
+        value: members.slice(0, 1024),
+        inline: true,
+      },
+      {
+        name: "Invite",
+        value: invite.slice(0, 1024),
+      },
+      {
+        name: "Contact",
+        value: contact.slice(0, 1024),
+      },
+    )
+    .setFooter({ text: "Calyx Partnership Application Data" });
+
+  await ticketChannel.send({
+    embeds: [dataEmbed],
+  });
+
+  // Store the full advertisement in Discord-safe chunks.
+  const adChunks = advertisement.match(/[\\s\\S]{1,1900}/g) ?? [];
+  for (let i = 0; i < adChunks.length; i++) {
+    await ticketChannel.send({
+      embeds: [
+        new EmbedBuilder()
+          .setTitle(
+            adChunks.length > 1
+              ? `📢 Applicant Advertisement (${i + 1}/${adChunks.length})`
+              : "📢 Applicant Advertisement",
+          )
+          .setDescription(adChunks[i])
+          .setColor(0x4f8cff),
+      ],
+    });
+  }
+
+  await interaction.reply({
+    content: `✅ Your partnership ticket has been created: ${ticketChannel}`,
+    flags: MessageFlags.Ephemeral,
+  });
+}
+
 export const partnershipCommand = {
   data: new SlashCommandBuilder()
     .setName("partnership")
@@ -93,28 +262,7 @@ export const partnershipCommand = {
     .addSubcommand((sub) =>
       sub
         .setName("apply")
-        .setDescription("Apply for a partnership")
-        .addStringOption((o) =>
-          o.setName("server").setDescription("Your server name").setRequired(true),
-        )
-        .addStringOption((o) =>
-          o.setName("invite").setDescription("Your Discord invite").setRequired(true),
-        )
-        .addStringOption((o) =>
-          o.setName("members").setDescription("Approximate member count").setRequired(true),
-        )
-        .addStringOption((o) =>
-          o.setName("description").setDescription("Tell us about your server").setRequired(true),
-        )
-        .addStringOption((o) =>
-          o.setName("contact").setDescription("How can we contact you?").setRequired(true),
-        )
-        .addStringOption((o) =>
-          o
-            .setName("ad")
-            .setDescription("The advertisement for your server")
-            .setRequired(true),
-        ),
+        .setDescription("Apply for a partnership"),
     )
 
     .addSubcommand((sub) =>
@@ -166,12 +314,55 @@ export const partnershipCommand = {
 
     // APPLY
     if (subcommand === "apply") {
-      const server = interaction.options.getString("server", true);
-      const invite = interaction.options.getString("invite", true);
-      const members = interaction.options.getString("members", true);
-      const description = interaction.options.getString("description", true);
-      const contact = interaction.options.getString("contact", true);
-      const advertisement = interaction.options.getString("ad", true);
+      const modal = new ModalBuilder()
+        .setCustomId("partnership_apply_modal")
+        .setTitle("Partnership Application")
+        .addComponents(
+          new ActionRowBuilder<TextInputBuilder>().addComponents(
+            new TextInputBuilder()
+              .setCustomId("server")
+              .setLabel("Server Name")
+              .setStyle(TextInputStyle.Short)
+              .setRequired(true)
+              .setMaxLength(100)
+          ),
+          new ActionRowBuilder<TextInputBuilder>().addComponents(
+            new TextInputBuilder()
+              .setCustomId("invite")
+              .setLabel("Discord Invite")
+              .setStyle(TextInputStyle.Short)
+              .setRequired(true)
+              .setMaxLength(200)
+          ),
+          new ActionRowBuilder<TextInputBuilder>().addComponents(
+            new TextInputBuilder()
+              .setCustomId("members")
+              .setLabel("Member Count")
+              .setStyle(TextInputStyle.Short)
+              .setRequired(true)
+              .setMaxLength(100)
+          ),
+          new ActionRowBuilder<TextInputBuilder>().addComponents(
+            new TextInputBuilder()
+              .setCustomId("contact")
+              .setLabel("Contact")
+              .setStyle(TextInputStyle.Short)
+              .setRequired(true)
+              .setMaxLength(200)
+          ),
+          new ActionRowBuilder<TextInputBuilder>().addComponents(
+            new TextInputBuilder()
+              .setCustomId("advertisement")
+              .setLabel("Advertisement")
+              .setStyle(TextInputStyle.Paragraph)
+              .setRequired(true)
+              .setMaxLength(4000)
+              .setPlaceholder("Paste your full partnership advertisement here...")
+          )
+        );
+
+      await interaction.showModal(modal);
+      return;
 
       const [config] = await db
         .select()
@@ -268,10 +459,6 @@ export const partnershipCommand = {
           {
             name: "Invite",
             value: invite.slice(0, 1024),
-          },
-          {
-            name: "Description",
-            value: description.slice(0, 1024),
           },
           {
             name: "Contact",
