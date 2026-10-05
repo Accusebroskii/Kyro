@@ -6,97 +6,149 @@ import {
   MessageFlags,
   TextChannel,
 } from "discord.js";
-import { db, guildConfigTable } from "@workspace/db";
-import { eq } from "drizzle-orm";
+import { db, guildConfigTable, ticketsTable } from "@workspace/db";
+import { eq, and } from "drizzle-orm";
+import { openTicket } from "./tickets.js";
 
 const STAFF_PERMISSIONS = PermissionFlagsBits.ManageGuild;
+
+async function getPartnershipData(channel: TextChannel) {
+  const messages = await channel.messages.fetch({ limit: 100 });
+
+  const dataMessage = messages.find(
+    (message) =>
+      message.author.id === message.client.user?.id &&
+      message.embeds.some(
+        (embed) => embed.title === "🤝 Partnership Application Data",
+      ),
+  );
+
+  if (!dataMessage) return null;
+
+  const embed = dataMessage.embeds[0];
+
+  const getField = (name: string) =>
+    embed.fields.find((field) => field.name === name)?.value ?? "";
+
+  return {
+    applicantId: getField("Applicant ID"),
+    server: getField("Server"),
+    invite: getField("Invite"),
+    members: getField("Members"),
+    description: getField("Description"),
+    contact: getField("Contact"),
+    advertisement: getField("Advertisement"),
+  };
+}
+
+function resolveMention(
+  interaction: ChatInputCommandInteraction,
+  value: string,
+) {
+  const input = value.trim();
+
+  if (input === "@everyone" || input === "@here") {
+    return {
+      mention: input,
+      everyone: true,
+      roleId: null,
+    };
+  }
+
+  const match = input.match(/^<@&(\d+)>$/);
+  const roleId = match?.[1] ?? (/^\d+$/.test(input) ? input : null);
+
+  if (!roleId) {
+    const role = interaction.guild?.roles.cache.find(
+      (r) => r.name.toLowerCase() === input.toLowerCase(),
+    );
+
+    if (role) {
+      return {
+        mention: `<@&${role.id}>`,
+        everyone: false,
+        roleId: role.id,
+      };
+    }
+
+    return null;
+  }
+
+  const role = interaction.guild?.roles.cache.get(roleId);
+
+  if (!role) return null;
+
+  return {
+    mention: `<@&${role.id}>`,
+    everyone: false,
+    roleId: role.id,
+  };
+}
 
 export const partnershipCommand = {
   data: new SlashCommandBuilder()
     .setName("partnership")
     .setDescription("Manage and apply for server partnerships")
+
     .addSubcommand((sub) =>
       sub
         .setName("apply")
         .setDescription("Apply for a partnership")
         .addStringOption((o) =>
-          o
-            .setName("server")
-            .setDescription("Your server name")
-            .setRequired(true),
+          o.setName("server").setDescription("Your server name").setRequired(true),
+        )
+        .addStringOption((o) =>
+          o.setName("invite").setDescription("Your Discord invite").setRequired(true),
+        )
+        .addStringOption((o) =>
+          o.setName("members").setDescription("Approximate member count").setRequired(true),
+        )
+        .addStringOption((o) =>
+          o.setName("description").setDescription("Tell us about your server").setRequired(true),
+        )
+        .addStringOption((o) =>
+          o.setName("contact").setDescription("How can we contact you?").setRequired(true),
         )
         .addStringOption((o) =>
           o
-            .setName("invite")
-            .setDescription("Your Discord invite")
-            .setRequired(true),
-        )
-        .addStringOption((o) =>
-          o
-            .setName("members")
-            .setDescription("Approximate member count")
-            .setRequired(true),
-        )
-        .addStringOption((o) =>
-          o
-            .setName("description")
-            .setDescription("Tell us about your server")
-            .setRequired(true),
-        )
-        .addStringOption((o) =>
-          o
-            .setName("contact")
-            .setDescription("How can we contact you?")
+            .setName("ad")
+            .setDescription("The advertisement for your server")
             .setRequired(true),
         ),
     )
+
     .addSubcommand((sub) =>
-      sub
-        .setName("info")
-        .setDescription("View partnership requirements"),
+      sub.setName("info").setDescription("View partnership requirements"),
     )
+
     .addSubcommand((sub) =>
-      sub
-        .setName("list")
-        .setDescription("View partnered servers"),
+      sub.setName("list").setDescription("View partnered servers"),
     )
+
     .addSubcommand((sub) =>
       sub
         .setName("accept")
-        .setDescription("Accept a partnership application")
+        .setDescription("Accept the partnership in the current partnership ticket")
         .addStringOption((o) =>
           o
-            .setName("server")
-            .setDescription("Server name")
-            .setRequired(true),
-        )
-        .addStringOption((o) =>
-          o
-            .setName("invite")
-            .setDescription("Discord invite")
+            .setName("role")
+            .setDescription("@everyone, @here, role mention, role ID, or role name")
             .setRequired(true),
         ),
     )
+
     .addSubcommand((sub) =>
       sub
         .setName("deny")
-        .setDescription("Deny a partnership application")
-        .addStringOption((o) =>
-          o
-            .setName("server")
-            .setDescription("Server name")
-            .setRequired(true),
-        ),
+        .setDescription("Deny the partnership in the current partnership ticket"),
     )
+
     .addSubcommand((sub) =>
       sub
         .setName("remove")
         .setDescription("Remove a partnered server")
         .addStringOption((o) =>
-          o
-            .setName("server")
-            .setDescription("Server name")
-            .setRequired(true),
+          o.setName("server").setDescription("Server name").setRequired(true),
         ),
     ),
 
@@ -112,52 +164,97 @@ export const partnershipCommand = {
     const subcommand = interaction.options.getSubcommand();
     const guildId = interaction.guildId;
 
-    // ─────────────────────────────
     // APPLY
-    // ─────────────────────────────
     if (subcommand === "apply") {
       const server = interaction.options.getString("server", true);
       const invite = interaction.options.getString("invite", true);
       const members = interaction.options.getString("members", true);
       const description = interaction.options.getString("description", true);
       const contact = interaction.options.getString("contact", true);
+      const advertisement = interaction.options.getString("ad", true);
 
-      const config = await db
+      const [config] = await db
         .select()
         .from(guildConfigTable)
         .where(eq(guildConfigTable.guildId, guildId))
         .limit(1);
 
-      const partnershipReviewChannelId = config[0]?.partnershipReviewChannelId;
-
-      if (!partnershipReviewChannelId) {
+      if (!config?.partnershipChannelId || !config.partnershipReviewChannelId) {
         await interaction.reply({
           content:
-            "❌ The partnership system has not been configured yet. An administrator needs to run `/setup partnership` first.",
+            "❌ The partnership system is not fully configured. An administrator needs to run `/setup partnership` first.",
           flags: MessageFlags.Ephemeral,
         });
         return;
       }
 
-      const channel = await interaction.guild.channels
-        .fetch(partnershipReviewChannelId)
-        .catch(() => null);
-
-      if (!channel || !(channel instanceof TextChannel)) {
+      if (!config.partnershipAd) {
         await interaction.reply({
           content:
-            "❌ The configured partnership review channel could not be found. Please ask an administrator to run `/setup partnership` again.",
+            "❌ The partnership advertisement for this server has not been configured yet.",
           flags: MessageFlags.Ephemeral,
         });
         return;
       }
 
-      const embed = new EmbedBuilder()
-        .setTitle("🤝 New Partnership Application")
-        .setDescription(
-          `A new partnership application has been submitted by ${interaction.user}.`,
+      const existing = await db
+        .select()
+        .from(ticketsTable)
+        .where(
+          and(
+            eq(ticketsTable.guildId, guildId),
+            eq(ticketsTable.userId, interaction.user.id),
+            eq(ticketsTable.subject, "Partnership Application"),
+          ),
         )
+        .limit(1);
+
+      if (existing[0]) {
+        const existingChannel = await interaction.guild.channels
+          .fetch(existing[0].channelId)
+          .catch(() => null);
+
+        if (existingChannel) {
+          await interaction.reply({
+            content: `❌ You already have a partnership ticket: <#${existing[0].channelId}>`,
+            flags: MessageFlags.Ephemeral,
+          });
+          return;
+        }
+      }
+
+      const ticket = await openTicket({
+        guildId,
+        guild: interaction.guild,
+        userId: interaction.user.id,
+        userTag: interaction.user.tag,
+        subject: "Partnership Application",
+      });
+
+      const ticketChannel = ticket.channel as TextChannel;
+
+      const calyxAd = new EmbedBuilder()
+        .setTitle("🤝 Partnership Advertisement")
+        .setDescription(config.partnershipAd)
+        .setColor(0x4f8cff);
+
+      await ticketChannel.send({
+        content:
+          `Welcome <@${interaction.user.id}>!\n\n` +
+          `Please send **proof that you sent our partnership advertisement in your partnership command**.\n\n` +
+          `📸 Upload a screenshot/image as proof below.\n\n` +
+          `Once your proof has been submitted, staff will review it.`,
+        embeds: [calyxAd],
+      });
+
+      const dataEmbed = new EmbedBuilder()
+        .setTitle("🤝 Partnership Application Data")
+        .setColor(0x4f8cff)
         .addFields(
+          {
+            name: "Applicant ID",
+            value: interaction.user.id,
+          },
           {
             name: "Server",
             value: server.slice(0, 1024),
@@ -171,170 +268,232 @@ export const partnershipCommand = {
           {
             name: "Invite",
             value: invite.slice(0, 1024),
-            inline: false,
           },
           {
             name: "Description",
             value: description.slice(0, 1024),
-            inline: false,
           },
           {
             name: "Contact",
             value: contact.slice(0, 1024),
-            inline: false,
+          },
+          {
+            name: "Advertisement",
+            value: advertisement.slice(0, 1024),
           },
         )
-        .setFooter({
-          text: `Applicant ID: ${interaction.user.id}`,
-        })
-        .setTimestamp();
+        .setFooter({ text: "Calyx Partnership Application Data" });
 
-      await channel.send({
-        embeds: [embed],
+      await ticketChannel.send({
+        embeds: [dataEmbed],
       });
 
       await interaction.reply({
-        content:
-          `✅ Your partnership application for **${server}** has been submitted!`,
+        content: `✅ Your partnership ticket has been created: ${ticketChannel}`,
         flags: MessageFlags.Ephemeral,
       });
 
       return;
     }
 
-    // ─────────────────────────────
     // INFO
-    // ─────────────────────────────
     if (subcommand === "info") {
-      const embed = new EmbedBuilder()
-        .setTitle("🤝 Partnership Information")
-        .setDescription(
-          "Interested in partnering with us? Submit an application using `/partnership apply`.",
-        )
-        .addFields(
-          {
-            name: "📌 How to Apply",
-            value:
-              "Use `/partnership apply` and provide your server information.",
-            inline: false,
-          },
-          {
-            name: "📋 Requirements",
-            value:
-              "• Real and active Discord server\n• Valid Discord invite\n• Accurate server information\n• Professional partnership proposal",
-            inline: false,
-          },
-          {
-            name: "📨 What Happens Next?",
-            value:
-              "Our staff team will review your application and decide whether to accept or deny it.",
-            inline: false,
-          },
-        )
-        .setTimestamp();
-
       await interaction.reply({
-        embeds: [embed],
+        embeds: [
+          new EmbedBuilder()
+            .setTitle("🤝 Partnership Information")
+            .setDescription(
+              "Interested in partnering with us? Use `/partnership apply`.",
+            )
+            .addFields({
+              name: "📋 Requirements",
+              value:
+                "• Real and active Discord server\n" +
+                "• Valid Discord invite\n" +
+                "• Accurate server information\n" +
+                "• Professional partnership advertisement\n" +
+                "• Proof that our advertisement was sent in your partnership command",
+            })
+            .setTimestamp(),
+        ],
       });
-
       return;
     }
 
-    // ─────────────────────────────
     // LIST
-    // ─────────────────────────────
     if (subcommand === "list") {
-      const embed = new EmbedBuilder()
-        .setTitle("🤝 Partnered Servers")
-        .setDescription(
-          "Our partnered server list will appear here once partnerships are added.",
-        )
-        .setTimestamp();
-
       await interaction.reply({
-        embeds: [embed],
+        embeds: [
+          new EmbedBuilder()
+            .setTitle("🤝 Partnered Servers")
+            .setDescription(
+              "Our partnered server list will appear here once partnerships are added.",
+            )
+            .setTimestamp(),
+        ],
       });
-
       return;
     }
 
-    // ─────────────────────────────
-    // STAFF COMMANDS
-    // ─────────────────────────────
+    // STAFF ONLY
     if (!interaction.memberPermissions?.has(STAFF_PERMISSIONS)) {
       await interaction.reply({
-        content:
-          "❌ You need the **Manage Server** permission to use this command.",
+        content: "❌ You need the **Manage Server** permission.",
         flags: MessageFlags.Ephemeral,
       });
       return;
     }
 
+    // ACCEPT
     if (subcommand === "accept") {
-      const server = interaction.options.getString("server", true);
-      const invite = interaction.options.getString("invite", true);
+      const mentionInput = interaction.options.getString("role", true);
+      const resolved = resolveMention(interaction, mentionInput);
 
-      const config = await db
+      if (!resolved) {
+        await interaction.reply({
+          content:
+            "❌ I couldn't find that role. Use a role mention, role ID, role name, `@everyone`, or `@here`.",
+          flags: MessageFlags.Ephemeral,
+        });
+        return;
+      }
+
+      const [ticket] = await db
         .select()
-        .from(guildConfigTable)
-        .where(eq(guildConfigTable.guildId, interaction.guildId!))
+        .from(ticketsTable)
+        .where(
+          and(
+            eq(ticketsTable.guildId, guildId),
+            eq(ticketsTable.channelId, interaction.channelId!),
+            eq(ticketsTable.subject, "Partnership Application"),
+          ),
+        )
         .limit(1);
 
-      const partnershipChannelId = config[0]?.partnershipChannelId;
-      const partnershipAd = config[0]?.partnershipAd;
-
-      if (!partnershipChannelId) {
+      if (!ticket) {
         await interaction.reply({
-          content: "❌ The partnership channel has not been configured yet.",
+          content:
+            "❌ `/partnership accept` must be used inside the applicant's partnership ticket.",
           flags: MessageFlags.Ephemeral,
         });
         return;
       }
 
-      const channel = await interaction.guild!.channels
-        .fetch(partnershipChannelId)
+      const ticketChannel = interaction.channel;
+
+      if (!(ticketChannel instanceof TextChannel)) {
+        await interaction.reply({
+          content: "❌ This is not a valid partnership ticket.",
+          flags: MessageFlags.Ephemeral,
+        });
+        return;
+      }
+
+      const data = await getPartnershipData(ticketChannel);
+
+      if (!data) {
+        await interaction.reply({
+          content: "❌ I couldn't find the partnership application data in this ticket.",
+          flags: MessageFlags.Ephemeral,
+        });
+        return;
+      }
+
+      if (!data.advertisement || !data.invite || !data.server) {
+        await interaction.reply({
+          content: "❌ The applicant's advertisement data is incomplete.",
+          flags: MessageFlags.Ephemeral,
+        });
+        return;
+      }
+
+      const [config] = await db
+        .select()
+        .from(guildConfigTable)
+        .where(eq(guildConfigTable.guildId, guildId))
+        .limit(1);
+
+      if (!config?.partnershipChannelId) {
+        await interaction.reply({
+          content: "❌ The partnership channel has not been configured.",
+          flags: MessageFlags.Ephemeral,
+        });
+        return;
+      }
+
+      const partnershipChannel = await interaction.guild.channels
+        .fetch(config.partnershipChannelId)
         .catch(() => null);
 
-      if (!channel || !channel.isTextBased()) {
+      if (!partnershipChannel?.isTextBased()) {
         await interaction.reply({
-          content: "❌ The configured partnership channel could not be found.",
+          content: "❌ The partnership channel could not be found.",
           flags: MessageFlags.Ephemeral,
         });
         return;
       }
 
-      const embed = new EmbedBuilder()
+      const partnerEmbed = new EmbedBuilder()
         .setTitle("🤝 New Partnership")
         .setDescription(
-          partnershipAd
-            ? `${partnershipAd}\n\n**Server:** ${server}\n**Invite:** ${invite}`
-            : `**Server:** ${server}\n**Invite:** ${invite}`,
+          `${data.advertisement}\n\n` +
+          `**Server:** ${data.server}\n` +
+          `**Invite:** ${data.invite}`,
         )
         .setTimestamp();
 
-      await channel.send({
-        embeds: [embed],
+      await partnershipChannel.send({
+        content: resolved.mention,
+        embeds: [partnerEmbed],
+        allowedMentions: resolved.everyone
+          ? { parse: ["everyone"] }
+          : { roles: resolved.roleId ? [resolved.roleId] : [] },
       });
 
       await interaction.reply({
-        content: `✅ Partnership for **${server}** has been accepted and posted.`,
+        content:
+          `✅ Partnership for **${data.server}** has been accepted and posted.\n` +
+          `📢 Ping: ${resolved.mention}`,
         flags: MessageFlags.Ephemeral,
       });
+
+      await ticketChannel.send(
+        `✅ Partnership accepted by ${interaction.user}. The partner advertisement has been posted.`,
+      );
 
       return;
     }
 
+    // DENY
     if (subcommand === "deny") {
-      const server = interaction.options.getString("server", true);
+      const [ticket] = await db
+        .select()
+        .from(ticketsTable)
+        .where(
+          and(
+            eq(ticketsTable.guildId, guildId),
+            eq(ticketsTable.channelId, interaction.channelId!),
+            eq(ticketsTable.subject, "Partnership Application"),
+          ),
+        )
+        .limit(1);
+
+      if (!ticket) {
+        await interaction.reply({
+          content:
+            "❌ `/partnership deny` must be used inside the applicant's partnership ticket.",
+          flags: MessageFlags.Ephemeral,
+        });
+        return;
+      }
 
       await interaction.reply({
-        content: `❌ Partnership application for **${server}** has been denied.`,
-        flags: MessageFlags.Ephemeral,
+        content: "❌ This partnership application has been denied.",
       });
-
       return;
     }
 
+    // REMOVE
     if (subcommand === "remove") {
       const server = interaction.options.getString("server", true);
 
@@ -342,8 +501,6 @@ export const partnershipCommand = {
         content: `🗑️ Partnership with **${server}** has been removed.`,
         flags: MessageFlags.Ephemeral,
       });
-
-      return;
     }
   },
 };

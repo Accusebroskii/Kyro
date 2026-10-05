@@ -55,8 +55,19 @@ function parseLayout(raw: string): ParsedCategory[] {
         current = { name: "General", channels: [] };
         categories.push(current);
       }
-      const channelName = text.toLowerCase().replace(/\s+/g, "-");
-      current.channels.push({ name: emoji ? `${emoji}｜${channelName}` : channelName });
+      const channelName = text
+        .toLowerCase()
+        .replace(/[｜|⟡✦◆●→»・]/g, " ")
+        .replace(/[^a-z0-9 emoji_-]/gi, " ")
+        .replace(/\s+/g, "-")
+        .replace(/^-+|-+$/g, "")
+        .slice(0, 90);
+
+      if (!channelName) continue;
+
+      current.channels.push({
+        name: emoji ? `${emoji}-${channelName}`.slice(0, 100) : channelName,
+      });
     }
   }
 
@@ -106,7 +117,13 @@ export async function handleTemplateModalSubmit(interaction: ModalSubmitInteract
   const categories = parseLayout(raw);
 
   if (categories.length === 0) {
-    await interaction.editReply({ embeds: [errorEmbed("Couldn't parse any categories/channels from that text. Make sure category lines contain ⟡ and channel lines contain ｜.")] });
+    await interaction.editReply({
+      embeds: [
+        errorEmbed(
+          "Couldn't parse your template. Put category names in CAPS and channels underneath them, for example:\n\n🎮 GAMEVERSE\n👋・welcome\n💬・chat",
+        ),
+      ],
+    });
     return;
   }
 

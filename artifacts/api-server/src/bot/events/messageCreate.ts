@@ -4,6 +4,7 @@ import { eq, and } from "drizzle-orm";
 import { logger } from "../../lib/logger.js";
 import { handleMessageXp } from "../commands/levels.js";
 
+import { handlePartnershipProof } from "../lib/partnershipProof.js";
 const spamTracker = new Map<string, { count: number; lastMessage: number; warned: boolean }>();
 const KALEIGH_USER_ID = "1236728950558953563";
 
@@ -106,6 +107,12 @@ async function handleCounting(message: Message, guildId: string): Promise<boolea
 }
 
 export async function onMessageCreate(message: Message): Promise<void> {
+  try {
+    await handlePartnershipProof(message);
+  } catch (err) {
+    logger.error({ err }, "Error in partnership proof handler");
+  }
+
   if (message.author.bot || !message.guild) return;
   const guildId = message.guild.id;
 
