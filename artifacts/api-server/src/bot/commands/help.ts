@@ -201,10 +201,33 @@ const COMMAND_CATEGORIES: Record<
       },
     ],
   },
+  "Server Support": {
+    emoji: "🤝",
+    commands: [
+      { name: "/partnership apply", description: "Apply for a server partnership" },
+      { name: "/partnership accept", description: "Accept a partnership application" },
+      { name: "/partnership deny", description: "Deny a partnership application" },
+      { name: "/partnership remove", description: "Remove a partnership" },
+      { name: "/support", description: "Get server support" },
+      { name: "/bugreport", description: "Submit a bug report" },
+      { name: "/playerreport", description: "Report a player" },
+    ],
+  },
+  Utility: {
+    emoji: "🔧",
+    commands: [
+      { name: "/template", description: "Create server categories and channels from a layout" },
+      { name: "/serverinfo", description: "View information about this server" },
+      { name: "/userinfo", description: "View information about a user" },
+      { name: "/botinfo", description: "View information about Calyx" },
+      { name: "/invite", description: "Get the bot invite/support server link" },
+    ],
+  },
   General: {
     emoji: "🔗",
     commands: [
-      { name: "/invite", description: "Get the link to our support server" },
+      { name: "/help", description: "View all available commands" },
+      { name: "/ping", description: "Check the bot's response time" },
     ],
   },
 };
@@ -224,7 +247,7 @@ export const helpCommand = {
           { name: "Tickets", value: "Tickets" },
           { name: "ModMail", value: "ModMail" },
           { name: "Music", value: "Music" },
-          { name: " Server Support", value: "Server Support" },
+          { name: "Server Support", value: "Server Support" },
           { name: "Fun", value: "Fun" },
           { name: "Utility", value: "Utility" },
           { name: "Security", value: "Security" },
