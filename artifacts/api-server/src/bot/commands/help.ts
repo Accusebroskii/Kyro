@@ -207,6 +207,7 @@ const COMMAND_CATEGORIES: Record<
       { name: "/partnership apply", description: "Apply for a server partnership" },
       { name: "/partnership accept", description: "Accept a partnership application" },
       { name: "/partnership deny", description: "Deny a partnership application" },
+      { name: "/partnership verify", description: "Check a partner server for Calyx's required advertisement" },
       { name: "/partnership remove", description: "Remove a partnership" },
       { name: "/support", description: "Get server support" },
       { name: "/bugreport", description: "Submit a bug report" },

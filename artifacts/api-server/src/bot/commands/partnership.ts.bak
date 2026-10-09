@@ -11,123 +11,54 @@ import {
   TextInputBuilder,
   TextInputStyle,
 } from "discord.js";
-import {
-  db,
-  guildConfigTable,
-  ticketsTable,
-  type PartnershipApplicationData,
-} from "@workspace/db";
+import { db, guildConfigTable, ticketsTable } from "@workspace/db";
 import { eq, and } from "drizzle-orm";
 import { openTicket } from "./tickets.js";
-import { verifyPartnershipAdvertisement } from "../lib/partnershipVerification.js";
 
 const STAFF_PERMISSIONS = PermissionFlagsBits.ManageGuild;
 
-async function getPartnershipData(
-  channel: TextChannel,
-  savedData: PartnershipApplicationData | null,
-  applicantId: string,
-) {
-  if (savedData) {
-    return { ...savedData, applicantId };
-  }
+async function getPartnershipData(channel: TextChannel) {
+  const messages = await channel.messages.fetch({ limit: 100 });
 
-  const messages = [];
-  let before: string | undefined;
-
-  // Read the full ticket history, not just its newest 100 messages.
-  while (true) {
-    const batch = await channel.messages.fetch({
-      limit: 100,
-      ...(before ? { before } : {}),
-    });
-
-    if (batch.size === 0) break;
-
-    messages.push(...batch.values());
-    before = batch.last()?.id;
-
-    if (batch.size < 100 || !before) break;
-  }
-
-  const botMessages = messages.filter(
-    (message) => message.author.id === message.client.user?.id,
-  );
-
-  const dataMessage = botMessages.find((message) =>
-    message.embeds.some(
-      (embed) => embed.title === "🤝 Partnership Application Data",
-    ),
+  const dataMessage = messages.find(
+    (message) =>
+      message.author.id === message.client.user?.id &&
+      message.embeds.some(
+        (embed) => embed.title === "🤝 Partnership Application Data",
+      ),
   );
 
   if (!dataMessage) return null;
 
-  const embed = dataMessage.embeds.find(
-    (item) => item.title === "🤝 Partnership Application Data",
-  )!;
+  const embed = dataMessage.embeds[0];
 
   const getField = (name: string) =>
     embed.fields.find((field) => field.name === name)?.value ?? "";
 
-  const advertisementMessages = botMessages
-    .filter((message) =>
-      message.embeds.some(
-        (item) =>
-          item.title === "📢 Applicant Advertisement" ||
-          item.title?.startsWith("📢 Applicant Advertisement ("),
-      ),
+  const advertisementMessages = messages
+    .filter(
+      (message) =>
+        message.author.id === message.client.user?.id &&
+        message.embeds.some(
+          (embed) =>
+            embed.title === "📢 Applicant Advertisement" ||
+            embed.title?.startsWith("📢 Applicant Advertisement ("),
+        ),
     )
     .sort((a, b) => a.createdTimestamp - b.createdTimestamp);
 
-  const extractedAdvertisement = advertisementMessages
-    .map((message) => {
-      const adEmbed = message.embeds.find(
-        (item) =>
-          item.title === "📢 Applicant Advertisement" ||
-          item.title?.startsWith("📢 Applicant Advertisement ("),
-      );
-      return adEmbed?.description ?? "";
-    })
+  const advertisement = advertisementMessages
+    .map((message) => message.embeds[0]?.description ?? "")
     .join("");
-  const advertisement = /^[sS\\]+$/.test(extractedAdvertisement)
-    ? ""
-    : extractedAdvertisement;
 
   return {
-    applicantId,
+    applicantId: getField("Applicant ID"),
     server: getField("Server"),
     invite: getField("Invite"),
     members: getField("Members"),
     contact: getField("Contact"),
     advertisement,
   };
-}
-
-function partnershipPostMarker(ticketId: number): string {
-  return `Calyx Partnerships • Application #${ticketId}`;
-}
-
-function isExistingPartnershipPost(
-  message: import("discord.js").Message,
-  ticketId: number,
-  data: Awaited<ReturnType<typeof getPartnershipData>>,
-): boolean {
-  if (message.author.bot !== true || !data) return false;
-  return message.embeds.some((embed) => {
-    if (embed.footer?.text === partnershipPostMarker(ticketId)) return true;
-    if (embed.title !== "🤝 New Partnership") return false;
-
-    const serverField = embed.fields.find((field) => field.name === "Server");
-    const inviteField = embed.fields.find((field) => field.name === "Invite");
-    if (serverField?.value === data.server && inviteField?.value === data.invite) {
-      return true;
-    }
-
-    return (
-      embed.description?.includes(`**Server:** ${data.server}`) === true &&
-      embed.description.includes(`**Invite:** ${data.invite}`)
-    );
-  });
 }
 
 function resolveMention(
@@ -229,15 +160,14 @@ export async function handlePartnershipApplyModalSubmit(
     )
     .limit(1);
 
-  const existingChannelId = existing[0]?.channelId;
-  if (existingChannelId) {
+  if (existing[0]) {
     const existingChannel = await interaction.guild.channels
-      .fetch(existingChannelId)
+      .fetch(existing[0].channelId)
       .catch(() => null);
 
     if (existingChannel) {
       await interaction.reply({
-        content: `❌ You already have a partnership ticket: <#${existingChannelId}>`,
+        content: `❌ You already have a partnership ticket: <#${existing[0].channelId}>`,
         flags: MessageFlags.Ephemeral,
       });
       return;
@@ -253,22 +183,6 @@ export async function handlePartnershipApplyModalSubmit(
   });
 
   const ticketChannel = ticket.channel as TextChannel;
-  const ticketRecord = ticket.ticket;
-  if (!ticketRecord) {
-    throw new Error("Partnership ticket was created without a database record");
-  }
-
-  const applicationData: PartnershipApplicationData = {
-    server,
-    invite,
-    members,
-    contact,
-    advertisement,
-  };
-  await db
-    .update(ticketsTable)
-    .set({ partnershipApplicationData: applicationData })
-    .where(eq(ticketsTable.id, ticketRecord.id));
 
   const calyxAd = new EmbedBuilder()
     .setTitle("🤝 Partnership Advertisement")
@@ -318,7 +232,7 @@ export async function handlePartnershipApplyModalSubmit(
   });
 
   // Store the full advertisement in Discord-safe chunks.
-  const adChunks = advertisement.match(/[\s\S]{1,1900}/g) ?? [];
+  const adChunks = advertisement.match(/[\\s\\S]{1,1900}/g) ?? [];
   for (let i = 0; i < adChunks.length; i++) {
     await ticketChannel.send({
       embeds: [
@@ -366,20 +280,8 @@ export const partnershipCommand = {
         .addStringOption((o) =>
           o
             .setName("role")
-            .setDescription("Optional role to ping: @everyone, @here, role mention, ID, or name"),
-        ),
-    )
-
-    .addSubcommand((sub) =>
-      sub
-        .setName("verify")
-        .setDescription("Check a partner server for Calyx's required advertisement")
-        .addStringOption((o) =>
-          o
-            .setName("server")
-            .setDescription("Partner server ID or invite link/code; the bot must be in that server")
-            .setRequired(true)
-            .setMaxLength(100),
+            .setDescription("@everyone, @here, role mention, role ID, or role name")
+            .setRequired(true),
         ),
     )
 
@@ -461,7 +363,125 @@ export const partnershipCommand = {
 
       await interaction.showModal(modal);
       return;
+
+      const [config] = await db
+        .select()
+        .from(guildConfigTable)
+        .where(eq(guildConfigTable.guildId, guildId))
+        .limit(1);
+
+      if (!config?.partnershipChannelId || !config.partnershipReviewChannelId) {
+        await interaction.reply({
+          content:
+            "❌ The partnership system is not fully configured. An administrator needs to run `/setup partnership` first.",
+          flags: MessageFlags.Ephemeral,
+        });
+        return;
       }
+
+      if (!config.partnershipAd) {
+        await interaction.reply({
+          content:
+            "❌ The partnership advertisement for this server has not been configured yet.",
+          flags: MessageFlags.Ephemeral,
+        });
+        return;
+      }
+
+      const existing = await db
+        .select()
+        .from(ticketsTable)
+        .where(
+          and(
+            eq(ticketsTable.guildId, guildId),
+            eq(ticketsTable.userId, interaction.user.id),
+            eq(ticketsTable.subject, "Partnership Application"),
+          ),
+        )
+        .limit(1);
+
+      if (existing[0]) {
+        const existingChannel = await interaction.guild.channels
+          .fetch(existing[0].channelId)
+          .catch(() => null);
+
+        if (existingChannel) {
+          await interaction.reply({
+            content: `❌ You already have a partnership ticket: <#${existing[0].channelId}>`,
+            flags: MessageFlags.Ephemeral,
+          });
+          return;
+        }
+      }
+
+      const ticket = await openTicket({
+        guildId,
+        guild: interaction.guild,
+        userId: interaction.user.id,
+        userTag: interaction.user.tag,
+        subject: "Partnership Application",
+      });
+
+      const ticketChannel = ticket.channel as TextChannel;
+
+      const calyxAd = new EmbedBuilder()
+        .setTitle("🤝 Partnership Advertisement")
+        .setDescription(config.partnershipAd)
+        .setColor(0x4f8cff);
+
+      await ticketChannel.send({
+        content:
+          `Welcome <@${interaction.user.id}>!\n\n` +
+          `Please send **proof that you sent our partnership advertisement in your partnership command**.\n\n` +
+          `📸 Upload a screenshot/image as proof below.\n\n` +
+          `Once your proof has been submitted, staff will review it.`,
+        embeds: [calyxAd],
+      });
+
+      const dataEmbed = new EmbedBuilder()
+        .setTitle("🤝 Partnership Application Data")
+        .setColor(0x4f8cff)
+        .addFields(
+          {
+            name: "Applicant ID",
+            value: interaction.user.id,
+          },
+          {
+            name: "Server",
+            value: server.slice(0, 1024),
+            inline: true,
+          },
+          {
+            name: "Members",
+            value: members.slice(0, 1024),
+            inline: true,
+          },
+          {
+            name: "Invite",
+            value: invite.slice(0, 1024),
+          },
+          {
+            name: "Contact",
+            value: contact.slice(0, 1024),
+          },
+          {
+            name: "Advertisement",
+            value: advertisement.slice(0, 1024),
+          },
+        )
+        .setFooter({ text: "Calyx Partnership Application Data" });
+
+      await ticketChannel.send({
+        embeds: [dataEmbed],
+      });
+
+      await interaction.reply({
+        content: `✅ Your partnership ticket has been created: ${ticketChannel}`,
+        flags: MessageFlags.Ephemeral,
+      });
+
+      return;
+    }
 
     // INFO
     if (subcommand === "info") {
@@ -513,10 +533,10 @@ export const partnershipCommand = {
 
     // ACCEPT
     if (subcommand === "accept") {
-      const mentionInput = interaction.options.getString("role");
-      const resolved = mentionInput ? resolveMention(interaction, mentionInput) : null;
+      const mentionInput = interaction.options.getString("role", true);
+      const resolved = resolveMention(interaction, mentionInput);
 
-      if (mentionInput && !resolved) {
+      if (!resolved) {
         await interaction.reply({
           content:
             "❌ I couldn't find that role. Use a role mention, role ID, role name, `@everyone`, or `@here`.",
@@ -556,36 +576,20 @@ export const partnershipCommand = {
         return;
       }
 
-      await interaction.deferReply({ flags: MessageFlags.Ephemeral });
-
-      const data = await getPartnershipData(
-        ticketChannel,
-        ticket.partnershipApplicationData,
-        ticket.userId,
-      );
+      const data = await getPartnershipData(ticketChannel);
 
       if (!data) {
-        await interaction.editReply({
+        await interaction.reply({
           content: "❌ I couldn't find the partnership application data in this ticket.",
+          flags: MessageFlags.Ephemeral,
         });
         return;
       }
 
-      const missingFields = [
-        ["server", data.server],
-        ["invite", data.invite],
-        ["member count", data.members],
-        ["contact", data.contact],
-        ["advertisement", data.advertisement],
-      ]
-        .filter(([, value]) => typeof value !== "string" || !value.trim())
-        .map(([label]) => label);
-
-      if (missingFields.length > 0) {
-        await interaction.editReply({
-          content:
-            `❌ The application is missing required field(s): **${missingFields.join(", ")}**. ` +
-            "Please ask the applicant to submit a complete application.",
+      if (!data.advertisement || !data.invite || !data.server) {
+        await interaction.reply({
+          content: "❌ The applicant's advertisement data is incomplete.",
+          flags: MessageFlags.Ephemeral,
         });
         return;
       }
@@ -597,8 +601,9 @@ export const partnershipCommand = {
         .limit(1);
 
       if (!config?.partnershipChannelId) {
-        await interaction.editReply({
+        await interaction.reply({
           content: "❌ The partnership channel has not been configured.",
+          flags: MessageFlags.Ephemeral,
         });
         return;
       }
@@ -608,158 +613,41 @@ export const partnershipCommand = {
         .catch(() => null);
 
       if (!partnershipChannel?.isTextBased()) {
-        await interaction.editReply({
+        await interaction.reply({
           content: "❌ The partnership channel could not be found.",
-        });
-        return;
-      }
-
-      if (!(partnershipChannel instanceof TextChannel)) {
-        await interaction.editReply({
-          content: "❌ The configured partnership channel is not a text channel.",
-        });
-        return;
-      }
-
-      let alreadyPosted: import("discord.js").Message | undefined;
-      if (ticket.partnershipPostMessageId) {
-        alreadyPosted = await partnershipChannel.messages
-          .fetch(ticket.partnershipPostMessageId)
-          .catch(() => undefined);
-      }
-
-      if (!alreadyPosted) {
-        const recentPosts = await partnershipChannel.messages
-          .fetch({ limit: 100 })
-          .catch(() => null);
-        if (!recentPosts) {
-          await interaction.editReply({
-            content:
-              "❌ I couldn't check whether this application was already posted. " +
-              "No new post was created; check that I have Read Message History in the partnership channel.",
-          });
-          return;
-        }
-        alreadyPosted = recentPosts.find((message) =>
-          isExistingPartnershipPost(message, ticket.id, data),
-        );
-      }
-
-      if (alreadyPosted) {
-        await db
-          .update(ticketsTable)
-          .set({ partnershipPostMessageId: alreadyPosted.id })
-          .where(eq(ticketsTable.id, ticket.id));
-        await interaction.editReply({
-          content:
-            `✅ Partnership for **${data.server}** was already posted: ${alreadyPosted.url}` +
-            (resolved?.mention ? `\n📢 Selected ping: ${resolved.mention}` : ""),
+          flags: MessageFlags.Ephemeral,
         });
         return;
       }
 
       const partnerEmbed = new EmbedBuilder()
         .setTitle("🤝 New Partnership")
-        .setDescription(data.advertisement)
-        .addFields(
-          { name: "Server", value: data.server },
-          { name: "Invite", value: data.invite },
+        .setDescription(
+          `${data.advertisement}\n\n` +
+          `**Server:** ${data.server}\n` +
+          `**Invite:** ${data.invite}`,
         )
-        .setFooter({ text: partnershipPostMarker(ticket.id) })
         .setTimestamp();
 
-      const publishedPost = await partnershipChannel.send({
-        content: resolved?.mention || undefined,
+      await partnershipChannel.send({
+        content: resolved.mention,
         embeds: [partnerEmbed],
-        allowedMentions: resolved
-          ? resolved.everyone
-            ? { parse: ["everyone"] }
-            : { roles: resolved.roleId ? [resolved.roleId] : [] }
-          : { parse: [] },
+        allowedMentions: resolved.everyone
+          ? { parse: ["everyone"] }
+          : { roles: resolved.roleId ? [resolved.roleId] : [] },
       });
 
-      await db
-        .update(ticketsTable)
-        .set({ partnershipPostMessageId: publishedPost.id })
-        .where(eq(ticketsTable.id, ticket.id));
-
-      await interaction.editReply({
+      await interaction.reply({
         content:
-          `✅ Partnership for **${data.server}** has been accepted and posted: ${publishedPost.url}` +
-          (resolved?.mention ? `\n📢 Ping: ${resolved.mention}` : ""),
+          `✅ Partnership for **${data.server}** has been accepted and posted.\n` +
+          `📢 Ping: ${resolved.mention}`,
+        flags: MessageFlags.Ephemeral,
       });
 
       await ticketChannel.send(
         `✅ Partnership accepted by ${interaction.user}. The partner advertisement has been posted.`,
       );
 
-      return;
-    }
-
-    if (subcommand === "verify") {
-      await interaction.deferReply({ flags: MessageFlags.Ephemeral });
-
-      const [config] = await db
-        .select()
-        .from(guildConfigTable)
-        .where(eq(guildConfigTable.guildId, guildId))
-        .limit(1);
-      if (!config?.partnershipAd?.trim()) {
-        await interaction.editReply({
-          content:
-            "UNABLE TO VERIFY — Calyx's partnership advertisement is not configured. " +
-            "Set it with `/setup partnership` first.",
-        });
-        return;
-      }
-
-      const identifier = interaction.options.getString("server", true).trim();
-      let partnerGuildId = identifier;
-      if (!/^\d{17,20}$/.test(identifier)) {
-        const invite = await interaction.client
-          .fetchInvite(identifier)
-          .catch(() => null);
-        if (!invite?.guild?.id) {
-          await interaction.editReply({
-            content:
-              "UNABLE TO VERIFY — I couldn't resolve that server ID or invite. " +
-              "Check the invite and make sure it hasn't expired.",
-          });
-          return;
-        }
-        partnerGuildId = invite.guild.id;
-      }
-
-      const result = await verifyPartnershipAdvertisement(
-        interaction.client,
-        partnerGuildId,
-        config.partnershipAd,
-      );
-      const color =
-        result.status === "VERIFIED"
-          ? 0x57f287
-          : result.status === "NOT FOUND"
-            ? 0xed4245
-            : 0xfee75c;
-      const embed = new EmbedBuilder()
-        .setTitle(`🤝 Partnership Check: ${result.status}`)
-        .setDescription(result.explanation)
-        .setColor(color)
-        .setFooter({
-          text: "Text-only check. Screenshot and image proof are not analyzed.",
-        })
-        .setTimestamp();
-
-      if (result.evidence) {
-        embed.addFields({
-          name: "Evidence",
-          value:
-            `Channel: <#${result.evidence.channelId}> (${result.evidence.channelName})\n` +
-            `[Open message](${result.evidence.messageUrl})`,
-        });
-      }
-
-      await interaction.editReply({ embeds: [embed] });
       return;
     }
 

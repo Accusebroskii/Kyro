@@ -164,8 +164,14 @@ export async function startBot(): Promise<void> {
         user_id TEXT NOT NULL, user_tag TEXT NOT NULL, subject TEXT, channel_id TEXT,
         status TEXT NOT NULL DEFAULT 'open', claimed_by TEXT, claimed_by_tag TEXT,
         closed_by TEXT, closed_reason TEXT, created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
-        closed_at TIMESTAMP WITH TIME ZONE
+        closed_at TIMESTAMP WITH TIME ZONE DEFAULT NULL,
+        partnership_application_data JSONB,
+        partnership_post_message_id TEXT
       );
+      ALTER TABLE tickets
+        ADD COLUMN IF NOT EXISTS partnership_application_data JSONB;
+      ALTER TABLE tickets
+        ADD COLUMN IF NOT EXISTS partnership_post_message_id TEXT;
       CREATE TABLE IF NOT EXISTS ticket_topics (
         id SERIAL PRIMARY KEY, guild_id TEXT NOT NULL,
         panel_name TEXT NOT NULL DEFAULT 'default',

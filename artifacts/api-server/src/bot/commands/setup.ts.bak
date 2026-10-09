@@ -193,15 +193,6 @@ export const setupCommand = {
     const sub = interaction.options.getSubcommand();
     const guildId = interaction.guildId!;
 
-    const sendSetupReply = async (payload: any) => {
-      if (interaction.replied || interaction.deferred) {
-        return interaction.editReply(payload);
-      }
-
-      return interaction.reply(payload);
-    };
-
-
     const existing = await db.select().from(guildConfigTable).where(eq(guildConfigTable.guildId, guildId)).limit(1);
     if (!existing[0]) {
       await db.insert(guildConfigTable).values({ guildId, guildName: interaction.guild!.name, ownerId: interaction.guild!.ownerId });
@@ -217,7 +208,7 @@ export const setupCommand = {
         const showMemberCount = interaction.options.getBoolean("show-member-count");
 
         if (color && !/^#?[0-9a-f]{6}$/i.test(color)) {
-          await sendSetupReply({ embeds: [errorEmbed("Color must be a 6-digit hex value such as `#9b59b6`.")], flags: MessageFlags.Ephemeral });
+          await interaction.reply({ embeds: [errorEmbed("Color must be a 6-digit hex value such as `#9b59b6`.")], flags: MessageFlags.Ephemeral });
           return;
         }
 
@@ -229,33 +220,33 @@ export const setupCommand = {
           ...(showServerIcon !== null ? { welcomeShowServerIcon: showServerIcon } : {}),
           ...(showMemberCount !== null ? { welcomeShowMemberCount: showMemberCount } : {}),
         }).where(eq(guildConfigTable.guildId, guildId));
-        await sendSetupReply({ embeds: [successEmbed("Welcome System", "Welcome settings updated.") ] });
+        await interaction.reply({ embeds: [successEmbed("Welcome System", "Welcome settings updated.") ] });
       } else if (sub === "background") {
         const url = interaction.options.getString("url", true);
         try {
           const parsed = new URL(url);
           if (parsed.protocol !== "http:" && parsed.protocol !== "https:") throw new Error("protocol");
         } catch {
-          await sendSetupReply({ embeds: [errorEmbed("Please provide a valid public HTTP(S) image URL.")], flags: MessageFlags.Ephemeral });
+          await interaction.reply({ embeds: [errorEmbed("Please provide a valid public HTTP(S) image URL.")], flags: MessageFlags.Ephemeral });
           return;
         }
         await db.update(guildConfigTable).set({ welcomeBackgroundUrl: url }).where(eq(guildConfigTable.guildId, guildId));
-        await sendSetupReply({ embeds: [successEmbed("Welcome Background", "Custom background saved. If it cannot be loaded, the default card background will be used automatically.")] });
+        await interaction.reply({ embeds: [successEmbed("Welcome Background", "Custom background saved. If it cannot be loaded, the default card background will be used automatically.")] });
       } else if (sub === "reset-background") {
         await db.update(guildConfigTable).set({ welcomeBackgroundUrl: null }).where(eq(guildConfigTable.guildId, guildId));
-        await sendSetupReply({ embeds: [successEmbed("Welcome Background", "Custom background removed. The default background will be used.")] });
+        await interaction.reply({ embeds: [successEmbed("Welcome Background", "Custom background removed. The default background will be used.")] });
       } else if (sub === "preview") {
         const [config] = await db.select().from(guildConfigTable).where(eq(guildConfigTable.guildId, guildId)).limit(1);
         try {
           const card = await generateWelcomeCard(interaction.member as GuildMember, config!);
-          await sendSetupReply({
+          await interaction.reply({
             content: "Here is a preview using your current welcome settings.",
             files: [new AttachmentBuilder(card, { name: "welcome-preview.png" })],
             flags: MessageFlags.Ephemeral,
           });
         } catch (err) {
           logger.warn({ err, guildId }, "Welcome preview generation failed");
-          await sendSetupReply({ embeds: [errorEmbed("I could not generate the preview. Check that the background URL is publicly accessible.")], flags: MessageFlags.Ephemeral });
+          await interaction.reply({ embeds: [errorEmbed("I could not generate the preview. Check that the background URL is publicly accessible.")], flags: MessageFlags.Ephemeral });
         }
       }
 
@@ -263,7 +254,7 @@ export const setupCommand = {
       const modlog = interaction.options.getChannel("modlog");
       const general = interaction.options.getChannel("general");
       await db.update(guildConfigTable).set({ ...(modlog ? { modLogChannelId: modlog.id } : {}), ...(general ? { logChannelId: general.id } : {}) }).where(eq(guildConfigTable.guildId, guildId));
-      await sendSetupReply({ embeds: [successEmbed("Logging Configured", `${modlog ? `Mod log: <#${modlog.id}>` : ""}\n${general ? `General log: <#${general.id}>` : ""}`)] });
+      await interaction.reply({ embeds: [successEmbed("Logging Configured", `${modlog ? `Mod log: <#${modlog.id}>` : ""}\n${general ? `General log: <#${general.id}>` : ""}`)] });
 
     } else if (sub === "tickets") {
       const cat = interaction.options.getChannel("category");
@@ -272,21 +263,21 @@ export const setupCommand = {
         ...(cat ? { ticketCategoryId: cat.id } : {}),
         ...(log ? { ticketLogChannelId: log.id } : {}),
       }).where(eq(guildConfigTable.guildId, guildId));
-      await sendSetupReply({ embeds: [successEmbed("Tickets Configured", "Ticket system updated.")] });
+      await interaction.reply({ embeds: [successEmbed("Tickets Configured", "Ticket system updated.")] });
 
       } else if (sub === "panel") {
         const { sessionId, draft } = await startPanelBuilder(guildId, interaction.user.id);
       interaction.user.id;
-      await sendSetupReply({ ...initialBuilderPayload(sessionId, draft), flags: MessageFlags.Ephemeral });
+      await interaction.reply({ ...initialBuilderPayload(sessionId, draft), flags: MessageFlags.Ephemeral });
 
     } else if (sub === "modmail") {
       if (interaction.user.id !== BOT_OWNER_ID) {
-        await sendSetupReply({ embeds: [errorEmbed("Only the bot owner can configure the ModMail forum.")], flags: MessageFlags.Ephemeral });
+        await interaction.reply({ embeds: [errorEmbed("Only the bot owner can configure the ModMail forum.")], flags: MessageFlags.Ephemeral });
         return;
       }
       const forum = interaction.options.getChannel("forum", true);
       await db.update(guildConfigTable).set({ modmailForumId: forum.id }).where(eq(guildConfigTable.guildId, guildId));
-      await sendSetupReply({ embeds: [successEmbed("ModMail Configured", `ModMail forum set to <#${forum.id}>.`)] });
+      await interaction.reply({ embeds: [successEmbed("ModMail Configured", `ModMail forum set to <#${forum.id}>.`)] });
 
     } else if (sub === "addtopic") {
       const panelName = interaction.options.getString("panel", true);
@@ -298,12 +289,12 @@ export const setupCommand = {
         and(eq(ticketTopicsTable.guildId, guildId), eq(ticketTopicsTable.panelName, panelName))
       );
       if (existingTopics.length >= 25) {
-        await sendSetupReply({ embeds: [errorEmbed("You can have a maximum of 25 topics per panel.")], flags: MessageFlags.Ephemeral });
+        await interaction.reply({ embeds: [errorEmbed("You can have a maximum of 25 topics per panel.")], flags: MessageFlags.Ephemeral });
         return;
       }
 
       await db.insert(ticketTopicsTable).values({ guildId, panelName, label, description, emoji });
-      await sendSetupReply({ embeds: [successEmbed("Topic Added", `Topic **${label}** added to panel **${panelName}**.`)] });
+      await interaction.reply({ embeds: [successEmbed("Topic Added", `Topic **${label}** added to panel **${panelName}**.`)] });
 
     } else if (sub === "removetopic") {
       const panelName = interaction.options.getString("panel", true);
@@ -311,14 +302,14 @@ export const setupCommand = {
       await db.delete(ticketTopicsTable).where(
         and(eq(ticketTopicsTable.guildId, guildId), eq(ticketTopicsTable.panelName, panelName), eq(ticketTopicsTable.label, label))
       );
-      await sendSetupReply({ embeds: [successEmbed("Topic Removed", `Topic **${label}** removed from panel **${panelName}**.`)] });
+      await interaction.reply({ embeds: [successEmbed("Topic Removed", `Topic **${label}** removed from panel **${panelName}**.`)] });
 
     } else if (sub === "listtopics") {
       const panelName = interaction.options.getString("panel");
       const topics = panelName
         ? await db.select().from(ticketTopicsTable).where(and(eq(ticketTopicsTable.guildId, guildId), eq(ticketTopicsTable.panelName, panelName)))
         : await db.select().from(ticketTopicsTable).where(eq(ticketTopicsTable.guildId, guildId));
-      await sendSetupReply({
+      await interaction.reply({
         embeds: [infoEmbed("Ticket Topics", topics.length
           ? topics.map((t) => `${t.emoji} **[${t.panelName}]** ${t.label}${t.description ? ` — ${t.description}` : ""}`).join("\n")
           : "No topics found.")],
@@ -334,7 +325,7 @@ export const setupCommand = {
         ...(antiraid !== null ? { antiRaidEnabled: antiraid } : {}),
         ...(automod !== null ? { automodEnabled: automod } : {}),
       }).where(eq(guildConfigTable.guildId, guildId));
-      await sendSetupReply({ embeds: [successEmbed("AutoMod Updated", `Anti-spam: ${antispam ?? "unchanged"}\nAnti-raid: ${antiraid ?? "unchanged"}\nAuto-mod: ${automod ?? "unchanged"}`)] });
+      await interaction.reply({ embeds: [successEmbed("AutoMod Updated", `Anti-spam: ${antispam ?? "unchanged"}\nAnti-raid: ${antiraid ?? "unchanged"}\nAuto-mod: ${automod ?? "unchanged"}`)] });
 
     } else if (sub === "roles") {
       const mod = interaction.options.getRole("modrole");
@@ -345,34 +336,34 @@ export const setupCommand = {
         ...(admin ? { adminRoleId: admin.id } : {}),
         ...(mute ? { muteRoleId: mute.id } : {}),
       }).where(eq(guildConfigTable.guildId, guildId));
-      await sendSetupReply({ embeds: [successEmbed("Roles Configured", "Role settings updated.")] });
+      await interaction.reply({ embeds: [successEmbed("Roles Configured", "Role settings updated.")] });
 
     } else if (sub === "jointovoice") {
       const ch = interaction.options.getChannel("channel", true);
       const cat = interaction.options.getChannel("category");
       await db.update(guildConfigTable).set({ joinToCreateChannelId: ch.id, ...(cat ? { joinToCreateCategoryId: cat.id } : {}) }).where(eq(guildConfigTable.guildId, guildId));
-      await sendSetupReply({ embeds: [successEmbed("Join-to-Create Configured", `Voice channel set to <#${ch.id}>.\nUsers joining this channel will get a private voice channel.`)] });
+      await interaction.reply({ embeds: [successEmbed("Join-to-Create Configured", `Voice channel set to <#${ch.id}>.\nUsers joining this channel will get a private voice channel.`)] });
 
     } else if (sub === "autorole") {
       const action = interaction.options.getString("action", true);
       if (action === "list") {
         const roles = await db.select().from(autoRolesTable).where(eq(autoRolesTable.guildId, guildId));
-        await sendSetupReply({ embeds: [infoEmbed("Auto-Roles", roles.length ? roles.map((r) => `<@&${r.roleId}>`).join("\n") : "No auto-roles configured.")] });
+        await interaction.reply({ embeds: [infoEmbed("Auto-Roles", roles.length ? roles.map((r) => `<@&${r.roleId}>`).join("\n") : "No auto-roles configured.")] });
       } else {
         const role = interaction.options.getRole("role");
-        if (!role) { await sendSetupReply({ embeds: [errorEmbed("Please specify a role.")], flags: MessageFlags.Ephemeral }); return; }
+        if (!role) { await interaction.reply({ embeds: [errorEmbed("Please specify a role.")], flags: MessageFlags.Ephemeral }); return; }
         if (action === "add") {
           await db.insert(autoRolesTable).values({ guildId, roleId: role.id, roleName: role.name });
-          await sendSetupReply({ embeds: [successEmbed("Auto-Role Added", `<@&${role.id}> will now be given to new members.`)] });
+          await interaction.reply({ embeds: [successEmbed("Auto-Role Added", `<@&${role.id}> will now be given to new members.`)] });
         } else {
           await db.delete(autoRolesTable).where(and(eq(autoRolesTable.guildId, guildId), eq(autoRolesTable.roleId, role.id)));
-          await sendSetupReply({ embeds: [successEmbed("Auto-Role Removed", `<@&${role.id}> removed from auto-roles.`)] });
+          await interaction.reply({ embeds: [successEmbed("Auto-Role Removed", `<@&${role.id}> removed from auto-roles.`)] });
         }
       }
 
     } else if (sub === "view") {
       const [cfg] = await db.select().from(guildConfigTable).where(eq(guildConfigTable.guildId, guildId)).limit(1);
-      if (!cfg) { await sendSetupReply({ embeds: [errorEmbed("No configuration found. Run a setup command first.")], flags: MessageFlags.Ephemeral }); return; }
+      if (!cfg) { await interaction.reply({ embeds: [errorEmbed("No configuration found. Run a setup command first.")], flags: MessageFlags.Ephemeral }); return; }
       const embed = new EmbedBuilder()
         .setTitle("⚙️ Bot Configuration")
         .setColor(0x5865f2)
@@ -402,18 +393,18 @@ export const setupCommand = {
           },
         )
         .setTimestamp();
-      await sendSetupReply({ embeds: [embed] });
+      await interaction.reply({ embeds: [embed] });
 
     } else if (sub === "maxwarnings") {
       const count = interaction.options.getInteger("count", true);
       await db.update(guildConfigTable).set({ maxWarnings: count }).where(eq(guildConfigTable.guildId, guildId));
-      await sendSetupReply({ embeds: [successEmbed("Max Warnings Set", `Auto-action will trigger at **${count}** warnings.`)] });
+      await interaction.reply({ embeds: [successEmbed("Max Warnings Set", `Auto-action will trigger at **${count}** warnings.`)] });
 
     } else if (sub === "levels") {
       const action = interaction.options.getString("action", true);
       if (action === "list") {
         const rewards = await db.select().from(levelRoleRewardsTable).where(eq(levelRoleRewardsTable.guildId, guildId));
-        await sendSetupReply({
+        await interaction.reply({
           embeds: [infoEmbed("Level Role Rewards", rewards.length
             ? rewards.map((r) => `Level ${r.level} → <@&${r.roleId}>`).join("\n")
             : "No level role rewards configured.")],
@@ -423,15 +414,15 @@ export const setupCommand = {
         const level = interaction.options.getInteger("level");
         const role = interaction.options.getRole("role");
         if (!level || !role) {
-          await sendSetupReply({ embeds: [errorEmbed("Please specify both a level and a role.")], flags: MessageFlags.Ephemeral });
+          await interaction.reply({ embeds: [errorEmbed("Please specify both a level and a role.")], flags: MessageFlags.Ephemeral });
           return;
         }
         if (action === "add") {
           await db.insert(levelRoleRewardsTable).values({ guildId, level, roleId: role.id });
-          await sendSetupReply({ embeds: [successEmbed("Reward Added", `Reaching **Level ${level}** now grants <@&${role.id}>.`)] });
+          await interaction.reply({ embeds: [successEmbed("Reward Added", `Reaching **Level ${level}** now grants <@&${role.id}>.`)] });
         } else {
           await db.delete(levelRoleRewardsTable).where(and(eq(levelRoleRewardsTable.guildId, guildId), eq(levelRoleRewardsTable.level, level), eq(levelRoleRewardsTable.roleId, role.id)));
-          await sendSetupReply({ embeds: [successEmbed("Reward Removed", `Removed the Level ${level} → <@&${role.id}> reward.`)] });
+          await interaction.reply({ embeds: [successEmbed("Reward Removed", `Removed the Level ${level} → <@&${role.id}> reward.`)] });
         }
       }
 
@@ -440,7 +431,7 @@ export const setupCommand = {
 
       if (method === "disable") {
         await db.update(guildConfigTable).set({ verificationEnabled: false }).where(eq(guildConfigTable.guildId, guildId));
-        await sendSetupReply({ embeds: [successEmbed("Verification Disabled", "Member verification has been turned off. Existing unverified/verified roles are untouched.")] });
+        await interaction.reply({ embeds: [successEmbed("Verification Disabled", "Member verification has been turned off. Existing unverified/verified roles are untouched.")] });
         return;
       }
 
@@ -450,7 +441,7 @@ export const setupCommand = {
       const word = interaction.options.getString("word");
 
       if (!channel || !unverifiedRole || !verifiedRole) {
-        await sendSetupReply({
+        await interaction.reply({
           embeds: [errorEmbed("Setting up verification requires `channel`, `unverifiedrole`, and `verifiedrole` to all be provided.")],
           flags: MessageFlags.Ephemeral,
         });
@@ -458,7 +449,7 @@ export const setupCommand = {
       }
 
       if (method === "word" && !word) {
-        await sendSetupReply({
+        await interaction.reply({
           embeds: [errorEmbed("The 'Type a Word/Phrase' method requires the `word` option to be set.")],
           flags: MessageFlags.Ephemeral,
         });
@@ -467,14 +458,14 @@ export const setupCommand = {
 
       const botMember = interaction.guild!.members.me;
       if (botMember && botMember.roles.highest.comparePositionTo(unverifiedRole as import("discord.js").Role) <= 0) {
-        await sendSetupReply({
+        await interaction.reply({
           embeds: [errorEmbed(`I can't manage <@&${unverifiedRole.id}> because it's positioned above (or equal to) my own highest role. Move my role above it in Server Settings → Roles.`)],
           flags: MessageFlags.Ephemeral,
         });
         return;
       }
       if (botMember && botMember.roles.highest.comparePositionTo(verifiedRole as import("discord.js").Role) <= 0) {
-        await sendSetupReply({
+        await interaction.reply({
           embeds: [errorEmbed(`I can't manage <@&${verifiedRole.id}> because it's positioned above (or equal to) my own highest role. Move my role above it in Server Settings → Roles.`)],
           flags: MessageFlags.Ephemeral,
         });
@@ -541,7 +532,7 @@ export const setupCommand = {
         ...(word ? { verificationWord: word } : {}),
       }).where(eq(guildConfigTable.guildId, guildId));
 
-      await sendSetupReply({
+      await interaction.reply({
         embeds: [successEmbed(
           "Verification Configured",
           `Method: **${VERIFICATION_METHOD_LABELS[method]}**\nChannel: <#${channel.id}>\nUnverified role: <@&${unverifiedRole.id}>\nVerified role: <@&${verifiedRole.id}>\n\nNew members will now be locked to <#${channel.id}> until they verify.`,
@@ -551,19 +542,19 @@ export const setupCommand = {
     } else if (sub === "suggestions") {
       const channel = interaction.options.getChannel("channel", true);
       await db.update(guildConfigTable).set({ suggestionsChannelId: channel.id }).where(eq(guildConfigTable.guildId, guildId));
-      await sendSetupReply({ embeds: [successEmbed("Suggestions Configured", `Suggestions will be posted in <#${channel.id}>. Members can use \`/suggest\` to submit ideas.`)] });
+      await interaction.reply({ embeds: [successEmbed("Suggestions Configured", `Suggestions will be posted in <#${channel.id}>. Members can use \`/suggest\` to submit ideas.`)] });
 
     } else if (sub === "starboard") {
       const disable = interaction.options.getBoolean("disable");
       if (disable) {
         await db.update(guildConfigTable).set({ starboardChannelId: null }).where(eq(guildConfigTable.guildId, guildId));
-        await sendSetupReply({ embeds: [successEmbed("Starboard Disabled", "The starboard has been turned off.")] });
+        await interaction.reply({ embeds: [successEmbed("Starboard Disabled", "The starboard has been turned off.")] });
         return;
       }
       const channel = interaction.options.getChannel("channel");
       const threshold = interaction.options.getInteger("threshold");
       if (!channel && !threshold) {
-        await sendSetupReply({ embeds: [errorEmbed("Please provide a `channel` and/or `threshold`.")] , flags: MessageFlags.Ephemeral });
+        await interaction.reply({ embeds: [errorEmbed("Please provide a `channel` and/or `threshold`.")] , flags: MessageFlags.Ephemeral });
         return;
       }
       await db.update(guildConfigTable).set({
@@ -571,7 +562,7 @@ export const setupCommand = {
         ...(threshold ? { starboardThreshold: threshold } : {}),
       }).where(eq(guildConfigTable.guildId, guildId));
       const [cfg] = await db.select().from(guildConfigTable).where(eq(guildConfigTable.guildId, guildId)).limit(1);
-      await sendSetupReply({ embeds: [successEmbed("Starboard Configured", `Channel: ${cfg?.starboardChannelId ? `<#${cfg.starboardChannelId}>` : "Not set"}\nThreshold: **${cfg?.starboardThreshold ?? 3} ⭐** to get on the board`)] });
+      await interaction.reply({ embeds: [successEmbed("Starboard Configured", `Channel: ${cfg?.starboardChannelId ? `<#${cfg.starboardChannelId}>` : "Not set"}\nThreshold: **${cfg?.starboardThreshold ?? 3} ⭐** to get on the board`)] });
       } else if (sub === "partnership") {
       const reviewChannel = interaction.options.getChannel("review_channel", true);
       const partnershipChannel = interaction.options.getChannel("partnership_channel", true);
@@ -585,7 +576,7 @@ export const setupCommand = {
         })
         .where(eq(guildConfigTable.guildId, guildId));
 
-      await sendSetupReply({
+      await interaction.reply({
         embeds: [
           successEmbed(
             "Partnership System",
@@ -604,7 +595,7 @@ export const setupCommand = {
           countingLastUserId: null,
         }).where(eq(guildConfigTable.guildId, guildId));
 
-        await sendSetupReply({
+        await interaction.reply({
           embeds: [successEmbed(
             "Counting Configured",
             `Counting channel set to <#${channel.id}>.\n\nThe counter has been reset to **0** and is ready to start.`

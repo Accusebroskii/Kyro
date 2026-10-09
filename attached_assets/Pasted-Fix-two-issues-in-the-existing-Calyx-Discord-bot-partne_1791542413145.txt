@@ -1,0 +1,38 @@
+Fix two issues in the existing Calyx Discord bot partnership system. Inspect the current codebase first and modify the existing implementation instead of creating a duplicate system.
+
+## 1. Fix `/partnership accept`
+
+The command currently responds with `The applicant's advertisement data is incomplete.` even though the application was submitted and proof was received.
+
+* Trace how `/partnership apply` saves the applicant's server name, invite, member count, contact and advertisement.
+* Trace how `/partnership accept` retrieves those fields. Fix the actual data mismatch or persistence bug instead of weakening validation.
+* Make sure the application data survives ticket creation, bot restarts and subsequent interactions, using the existing database/schema where appropriate.
+* After acceptance, publish the applicant's advertisement in the configured partnership channel, include their server name and invite, and ping the staff-selected role if one was selected.
+* Do not publish Calyx's own advertisement as the partner's advertisement.
+* Keep the existing permissions and review workflow intact.
+* Return a clear error when genuinely required data is missing, identifying which field is missing without exposing sensitive information.
+* Prevent accidental duplicate partnership posts if the accept interaction is retried.
+
+## 2. Add AI-assisted verification of Calyx advertisements
+
+Add a staff-only subcommand, preferably `/partnership verify`, that checks whether a partner server is still displaying Calyx's required advertisement.
+
+* Reuse the existing OpenAI integration in `src/bot/lib/ai.ts` and the configured API key. Do not hardcode secrets or introduce a separate AI client.
+* Retrieve the configured Calyx partnership advertisement from the existing database/settings.
+* Inspect accessible channels in the partner server for messages that contain the required advertisement. Use Discord's existing guild, channel and message APIs.
+* Use AI to compare the required advertisement against the discovered message, allowing harmless formatting differences while detecting missing or materially changed content.
+* Return a structured result: VERIFIED, NOT FOUND, or UNABLE TO VERIFY.
+* Include the evidence message link and channel when available, and explain the result.
+* If the bot is not in the partner's server, lacks permissions, cannot read the channel, or encounters an API/AI quota error, report UNABLE TO VERIFY rather than falsely claiming the advertisement was removed.
+* Do not automatically punish, remove partnerships or accuse partners based on AI results. Staff must make the final decision.
+* Keep token use reasonable by searching relevant messages and limiting the content sent to the AI.
+* If screenshot proof is the only available evidence, explain that image verification needs a supported vision implementation; do not pretend text-only AI has verified an image.
+
+## 3. Testing and delivery
+
+* Inspect the existing command definitions, database schema, application submission flow, proof handler and acceptance logic before editing.
+* Preserve existing command names, settings and compatibility.
+* Run the available TypeScript build, lint and relevant tests.
+* Fix any errors introduced by these changes.
+* Summarize the root cause of the acceptance bug, the files changed, the verification workflow and any required Discord permissions or database migration.
+* Do not claim the fixes work unless the relevant checks pass.

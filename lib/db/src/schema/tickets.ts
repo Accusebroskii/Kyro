@@ -1,6 +1,14 @@
-import { pgTable, text, serial, timestamp, integer } from "drizzle-orm/pg-core";
+import { pgTable, text, serial, timestamp, integer, jsonb } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod/v4";
+
+export interface PartnershipApplicationData {
+  server: string;
+  invite: string;
+  members: string;
+  contact: string;
+  advertisement: string;
+}
 
 export const ticketsTable = pgTable("tickets", {
   id: serial("id").primaryKey(),
@@ -15,6 +23,9 @@ export const ticketsTable = pgTable("tickets", {
   claimedByTag: text("claimed_by_tag"),
   closedBy: text("closed_by"),
   closedReason: text("closed_reason"),
+  partnershipApplicationData: jsonb("partnership_application_data")
+    .$type<PartnershipApplicationData | null>(),
+  partnershipPostMessageId: text("partnership_post_message_id"),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   closedAt: timestamp("closed_at", { withTimezone: true }),
 });

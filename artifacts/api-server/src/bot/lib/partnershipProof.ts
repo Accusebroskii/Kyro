@@ -46,6 +46,8 @@ export async function handlePartnershipProof(message: Message) {
     return;
   }
 
+  if (!message.guild) return;
+
   const reviewChannel = await message.guild.channels
     .fetch(config.partnershipReviewChannelId)
     .catch(() => null);
