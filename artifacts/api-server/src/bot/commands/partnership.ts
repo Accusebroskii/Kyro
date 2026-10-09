@@ -112,7 +112,7 @@ function isExistingPartnershipPost(
   ticketId: number,
   data: Awaited<ReturnType<typeof getPartnershipData>>,
 ): boolean {
-  if (message.author.bot !== true || !data) return false;
+  if (message.author.id !== message.client.user?.id || !data) return false;
   return message.embeds.some((embed) => {
     if (embed.footer?.text === partnershipPostMarker(ticketId)) return true;
     if (embed.title !== "🤝 New Partnership") return false;

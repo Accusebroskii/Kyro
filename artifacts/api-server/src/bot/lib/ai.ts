@@ -53,6 +53,10 @@ export async function comparePartnershipAdvertisements(
   requiredAdvertisement: string,
   observedMessage: string,
 ): Promise<{ matches: boolean; explanation: string }> {
+  if (requiredAdvertisement.length > 6000 || observedMessage.length > 6000) {
+    throw new Error("Partnership advertisement comparison input exceeded its size limit");
+  }
+
   const response = await openai.responses.create({
     model: "gpt-5.6-luna",
     max_output_tokens: 180,
@@ -63,8 +67,8 @@ export async function comparePartnershipAdvertisements(
       "Set matches true only when the observed message includes the required ad's material content. " +
       "Ignore harmless formatting, whitespace, and emoji differences. " +
       "Missing or materially changed required content means matches false. Do not infer content that is absent.\n\n" +
-      `Required advertisement:\n${JSON.stringify(requiredAdvertisement.slice(0, 4500))}\n\n` +
-      `Observed server message:\n${JSON.stringify(observedMessage.slice(0, 4500))}`,
+      `Required advertisement:\n${JSON.stringify(requiredAdvertisement)}\n\n` +
+      `Observed server message:\n${JSON.stringify(observedMessage)}`,
   });
 
   const output = response.output_text.trim();
