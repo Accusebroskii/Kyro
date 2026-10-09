@@ -18,37 +18,62 @@ import { openTicket } from "./tickets.js";
 const STAFF_PERMISSIONS = PermissionFlagsBits.ManageGuild;
 
 async function getPartnershipData(channel: TextChannel) {
-  const messages = await channel.messages.fetch({ limit: 100 });
+  const messages = [];
+  let before: string | undefined;
 
-  const dataMessage = messages.find(
-    (message) =>
-      message.author.id === message.client.user?.id &&
-      message.embeds.some(
-        (embed) => embed.title === "🤝 Partnership Application Data",
-      ),
+  // Read the full ticket history, not just its newest 100 messages.
+  while (true) {
+    const batch = await channel.messages.fetch({
+      limit: 100,
+      ...(before ? { before } : {}),
+    });
+
+    if (batch.size === 0) break;
+
+    messages.push(...batch.values());
+    before = batch.last()?.id;
+
+    if (batch.size < 100 || !before) break;
+  }
+
+  const botMessages = messages.filter(
+    (message) => message.author.id === message.client.user?.id,
+  );
+
+  const dataMessage = botMessages.find((message) =>
+    message.embeds.some(
+      (embed) => embed.title === "🤝 Partnership Application Data",
+    ),
   );
 
   if (!dataMessage) return null;
 
-  const embed = dataMessage.embeds[0];
+  const embed = dataMessage.embeds.find(
+    (item) => item.title === "🤝 Partnership Application Data",
+  )!;
 
   const getField = (name: string) =>
     embed.fields.find((field) => field.name === name)?.value ?? "";
 
-  const advertisementMessages = messages
-    .filter(
-      (message) =>
-        message.author.id === message.client.user?.id &&
-        message.embeds.some(
-          (embed) =>
-            embed.title === "📢 Applicant Advertisement" ||
-            embed.title?.startsWith("📢 Applicant Advertisement ("),
-        ),
+  const advertisementMessages = botMessages
+    .filter((message) =>
+      message.embeds.some(
+        (item) =>
+          item.title === "📢 Applicant Advertisement" ||
+          item.title?.startsWith("📢 Applicant Advertisement ("),
+      ),
     )
     .sort((a, b) => a.createdTimestamp - b.createdTimestamp);
 
   const advertisement = advertisementMessages
-    .map((message) => message.embeds[0]?.description ?? "")
+    .map((message) => {
+      const adEmbed = message.embeds.find(
+        (item) =>
+          item.title === "📢 Applicant Advertisement" ||
+          item.title?.startsWith("📢 Applicant Advertisement ("),
+      );
+      return adEmbed?.description ?? "";
+    })
     .join("");
 
   return {
