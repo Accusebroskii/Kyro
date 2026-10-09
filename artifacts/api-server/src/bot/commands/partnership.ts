@@ -20,159 +20,9 @@ import {
 import { eq, and } from "drizzle-orm";
 import { openTicket } from "./tickets.js";
 import { verifyPartnershipAdvertisement } from "../lib/partnershipVerification.js";
+import { grantPartnershipPostingRole } from "../lib/partnershipAccess.js";
 
 const STAFF_PERMISSIONS = PermissionFlagsBits.ManageGuild;
-
-async function getPartnershipData(
-  channel: TextChannel,
-  savedData: PartnershipApplicationData | null,
-  applicantId: string,
-) {
-  if (savedData) {
-    return { ...savedData, applicantId };
-  }
-
-  const messages = [];
-  let before: string | undefined;
-
-  // Read the full ticket history, not just its newest 100 messages.
-  while (true) {
-    const batch = await channel.messages.fetch({
-      limit: 100,
-      ...(before ? { before } : {}),
-    });
-
-    if (batch.size === 0) break;
-
-    messages.push(...batch.values());
-    before = batch.last()?.id;
-
-    if (batch.size < 100 || !before) break;
-  }
-
-  const botMessages = messages.filter(
-    (message) => message.author.id === message.client.user?.id,
-  );
-
-  const dataMessage = botMessages.find((message) =>
-    message.embeds.some(
-      (embed) => embed.title === "🤝 Partnership Application Data",
-    ),
-  );
-
-  if (!dataMessage) return null;
-
-  const embed = dataMessage.embeds.find(
-    (item) => item.title === "🤝 Partnership Application Data",
-  )!;
-
-  const getField = (name: string) =>
-    embed.fields.find((field) => field.name === name)?.value ?? "";
-
-  const advertisementMessages = botMessages
-    .filter((message) =>
-      message.embeds.some(
-        (item) =>
-          item.title === "📢 Applicant Advertisement" ||
-          item.title?.startsWith("📢 Applicant Advertisement ("),
-      ),
-    )
-    .sort((a, b) => a.createdTimestamp - b.createdTimestamp);
-
-  const extractedAdvertisement = advertisementMessages
-    .map((message) => {
-      const adEmbed = message.embeds.find(
-        (item) =>
-          item.title === "📢 Applicant Advertisement" ||
-          item.title?.startsWith("📢 Applicant Advertisement ("),
-      );
-      return adEmbed?.description ?? "";
-    })
-    .join("");
-  const advertisement = /^[sS\\]+$/.test(extractedAdvertisement)
-    ? ""
-    : extractedAdvertisement;
-
-  return {
-    applicantId,
-    server: getField("Server"),
-    invite: getField("Invite"),
-    members: getField("Members"),
-    contact: getField("Contact"),
-    advertisement,
-  };
-}
-
-function partnershipPostMarker(ticketId: number): string {
-  return `Calyx Partnerships • Application #${ticketId}`;
-}
-
-function isExistingPartnershipPost(
-  message: import("discord.js").Message,
-  ticketId: number,
-  data: Awaited<ReturnType<typeof getPartnershipData>>,
-): boolean {
-  if (message.author.id !== message.client.user?.id || !data) return false;
-  return message.embeds.some((embed) => {
-    if (embed.footer?.text === partnershipPostMarker(ticketId)) return true;
-    if (embed.title !== "🤝 New Partnership") return false;
-
-    const serverField = embed.fields.find((field) => field.name === "Server");
-    const inviteField = embed.fields.find((field) => field.name === "Invite");
-    if (serverField?.value === data.server && inviteField?.value === data.invite) {
-      return true;
-    }
-
-    return (
-      embed.description?.includes(`**Server:** ${data.server}`) === true &&
-      embed.description.includes(`**Invite:** ${data.invite}`)
-    );
-  });
-}
-
-function resolveMention(
-  interaction: ChatInputCommandInteraction,
-  value: string,
-) {
-  const input = value.trim();
-
-  if (input === "@everyone" || input === "@here") {
-    return {
-      mention: input,
-      everyone: true,
-      roleId: null,
-    };
-  }
-
-  const match = input.match(/^<@&(\d+)>$/);
-  const roleId = match?.[1] ?? (/^\d+$/.test(input) ? input : null);
-
-  if (!roleId) {
-    const role = interaction.guild?.roles.cache.find(
-      (r) => r.name.toLowerCase() === input.toLowerCase(),
-    );
-
-    if (role) {
-      return {
-        mention: `<@&${role.id}>`,
-        everyone: false,
-        roleId: role.id,
-      };
-    }
-
-    return null;
-  }
-
-  const role = interaction.guild?.roles.cache.get(roleId);
-
-  if (!role) return null;
-
-  return {
-    mention: `<@&${role.id}>`,
-    everyone: false,
-    roleId: role.id,
-  };
-}
 
 export async function handlePartnershipApplyModalSubmit(
   interaction: ModalSubmitInteraction,
@@ -199,10 +49,14 @@ export async function handlePartnershipApplyModalSubmit(
     .where(eq(guildConfigTable.guildId, guildId))
     .limit(1);
 
-  if (!config?.partnershipChannelId || !config.partnershipReviewChannelId) {
+  if (
+    !config?.partnershipChannelId ||
+    !config.partnershipReviewChannelId ||
+    !config.partnershipRoleId
+  ) {
     await interaction.reply({
       content:
-        "❌ The partnership system is not fully configured. An administrator needs to run `/setup partnership` first.",
+        "❌ The partnership destination, review channel, and access role must be configured with `/setup partnership` first.",
       flags: MessageFlags.Ephemeral,
     });
     return;
@@ -257,6 +111,9 @@ export async function handlePartnershipApplyModalSubmit(
   if (!ticketRecord) {
     throw new Error("Partnership ticket was created without a database record");
   }
+  await ticketChannel.permissionOverwrites.edit(interaction.user.id, {
+    AttachFiles: true,
+  });
 
   const applicationData: PartnershipApplicationData = {
     server,
@@ -278,9 +135,9 @@ export async function handlePartnershipApplyModalSubmit(
   await ticketChannel.send({
     content:
       `Welcome <@${interaction.user.id}>!\n\n` +
-      `Please send **proof that you sent our partnership advertisement in your partnership command**.\n\n` +
-      `📸 Upload a screenshot/image as proof below.\n\n` +
-      `Once your proof has been submitted, staff will review it.`,
+      `Post the Calyx advertisement below in your server, then upload a clear screenshot showing it was sent.\n\n` +
+      `📸 The AI checks the screenshot automatically. If it clearly matches, I’ll give you the configured partner role so you can post your ad in <#${config.partnershipChannelId}>.\n\n` +
+      `Use one PNG, JPEG, or WebP screenshot per message. If the image is unclear or the check fails, you can try again.`,
     embeds: [calyxAd],
   });
 
@@ -362,18 +219,13 @@ export const partnershipCommand = {
     .addSubcommand((sub) =>
       sub
         .setName("accept")
-        .setDescription("Accept the partnership in the current partnership ticket")
-        .addStringOption((o) =>
-          o
-            .setName("role")
-            .setDescription("Optional role to ping: @everyone, @here, role mention, ID, or name"),
-        ),
+      .setDescription("Staff override: manually grant posting access for this ticket"),
     )
 
     .addSubcommand((sub) =>
       sub
         .setName("verify")
-        .setDescription("Check a partner server for Calyx's required advertisement")
+        .setDescription("Text-search a partner server for Calyx's ad; ticket screenshots are checked automatically")
         .addStringOption((o) =>
           o
             .setName("server")
@@ -479,7 +331,7 @@ export const partnershipCommand = {
                 "• Valid Discord invite\n" +
                 "• Accurate server information\n" +
                 "• Professional partnership advertisement\n" +
-                "• Proof that our advertisement was sent in your partnership command",
+                "• A clear screenshot showing our advertisement posted in your server",
             })
             .setTimestamp(),
         ],
@@ -511,20 +363,8 @@ export const partnershipCommand = {
       return;
     }
 
-    // ACCEPT
+    // ACCEPT is a staff override; successful screenshot checks grant this role automatically.
     if (subcommand === "accept") {
-      const mentionInput = interaction.options.getString("role");
-      const resolved = mentionInput ? resolveMention(interaction, mentionInput) : null;
-
-      if (mentionInput && !resolved) {
-        await interaction.reply({
-          content:
-            "❌ I couldn't find that role. Use a role mention, role ID, role name, `@everyone`, or `@here`.",
-          flags: MessageFlags.Ephemeral,
-        });
-        return;
-      }
-
       const [ticket] = await db
         .select()
         .from(ticketsTable)
@@ -546,49 +386,7 @@ export const partnershipCommand = {
         return;
       }
 
-      const ticketChannel = interaction.channel;
-
-      if (!(ticketChannel instanceof TextChannel)) {
-        await interaction.reply({
-          content: "❌ This is not a valid partnership ticket.",
-          flags: MessageFlags.Ephemeral,
-        });
-        return;
-      }
-
       await interaction.deferReply({ flags: MessageFlags.Ephemeral });
-
-      const data = await getPartnershipData(
-        ticketChannel,
-        ticket.partnershipApplicationData,
-        ticket.userId,
-      );
-
-      if (!data) {
-        await interaction.editReply({
-          content: "❌ I couldn't find the partnership application data in this ticket.",
-        });
-        return;
-      }
-
-      const missingFields = [
-        ["server", data.server],
-        ["invite", data.invite],
-        ["member count", data.members],
-        ["contact", data.contact],
-        ["advertisement", data.advertisement],
-      ]
-        .filter(([, value]) => typeof value !== "string" || !value.trim())
-        .map(([label]) => label);
-
-      if (missingFields.length > 0) {
-        await interaction.editReply({
-          content:
-            `❌ The application is missing required field(s): **${missingFields.join(", ")}**. ` +
-            "Please ask the applicant to submit a complete application.",
-        });
-        return;
-      }
 
       const [config] = await db
         .select()
@@ -596,102 +394,34 @@ export const partnershipCommand = {
         .where(eq(guildConfigTable.guildId, guildId))
         .limit(1);
 
-      if (!config?.partnershipChannelId) {
+      if (!config?.partnershipChannelId || !config.partnershipRoleId) {
         await interaction.editReply({
-          content: "❌ The partnership channel has not been configured.",
+          content: "❌ Run `/setup partnership` to configure the posting destination and role.",
         });
         return;
       }
 
-      const partnershipChannel = await interaction.guild.channels
-        .fetch(config.partnershipChannelId)
-        .catch(() => null);
-
-      if (!partnershipChannel?.isTextBased()) {
-        await interaction.editReply({
-          content: "❌ The partnership channel could not be found.",
-        });
+      const result = await grantPartnershipPostingRole(
+        interaction.guild,
+        ticket.userId,
+        config.partnershipRoleId,
+      );
+      if (!result.ok) {
+        await interaction.editReply({ content: `❌ ${result.error}` });
         return;
       }
-
-      if (!(partnershipChannel instanceof TextChannel)) {
-        await interaction.editReply({
-          content: "❌ The configured partnership channel is not a text channel.",
-        });
-        return;
-      }
-
-      let alreadyPosted: import("discord.js").Message | undefined;
-      if (ticket.partnershipPostMessageId) {
-        alreadyPosted = await partnershipChannel.messages
-          .fetch(ticket.partnershipPostMessageId)
-          .catch(() => undefined);
-      }
-
-      if (!alreadyPosted) {
-        const recentPosts = await partnershipChannel.messages
-          .fetch({ limit: 100 })
-          .catch(() => null);
-        if (!recentPosts) {
-          await interaction.editReply({
-            content:
-              "❌ I couldn't check whether this application was already posted. " +
-              "No new post was created; check that I have Read Message History in the partnership channel.",
-          });
-          return;
-        }
-        alreadyPosted = recentPosts.find((message) =>
-          isExistingPartnershipPost(message, ticket.id, data),
-        );
-      }
-
-      if (alreadyPosted) {
-        await db
-          .update(ticketsTable)
-          .set({ partnershipPostMessageId: alreadyPosted.id })
-          .where(eq(ticketsTable.id, ticket.id));
-        await interaction.editReply({
-          content:
-            `✅ Partnership for **${data.server}** was already posted: ${alreadyPosted.url}` +
-            (resolved?.mention ? `\n📢 Selected ping: ${resolved.mention}` : ""),
-        });
-        return;
-      }
-
-      const partnerEmbed = new EmbedBuilder()
-        .setTitle("🤝 New Partnership")
-        .setDescription(data.advertisement)
-        .addFields(
-          { name: "Server", value: data.server },
-          { name: "Invite", value: data.invite },
-        )
-        .setFooter({ text: partnershipPostMarker(ticket.id) })
-        .setTimestamp();
-
-      const publishedPost = await partnershipChannel.send({
-        content: resolved?.mention || undefined,
-        embeds: [partnerEmbed],
-        allowedMentions: resolved
-          ? resolved.everyone
-            ? { parse: ["everyone"] }
-            : { roles: resolved.roleId ? [resolved.roleId] : [] }
-          : { parse: [] },
-      });
-
-      await db
-        .update(ticketsTable)
-        .set({ partnershipPostMessageId: publishedPost.id })
-        .where(eq(ticketsTable.id, ticket.id));
 
       await interaction.editReply({
         content:
-          `✅ Partnership for **${data.server}** has been accepted and posted: ${publishedPost.url}` +
-          (resolved?.mention ? `\n📢 Ping: ${resolved.mention}` : ""),
+          `✅ Manually granted <@&${result.role.id}> to <@${ticket.userId}>. ` +
+          `They can now post their own ad in <#${config.partnershipChannelId}>.`,
       });
 
-      await ticketChannel.send(
-        `✅ Partnership accepted by ${interaction.user}. The partner advertisement has been posted.`,
-      );
+      if (interaction.channel instanceof TextChannel) {
+        await interaction.channel.send(
+          `✅ Staff manually granted <@&${result.role.id}> to <@${ticket.userId}> for partnership posting.`,
+        );
+      }
 
       return;
     }

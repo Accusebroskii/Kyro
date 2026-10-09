@@ -155,6 +155,8 @@ export async function startBot(): Promise<void> {
         verification_enabled BOOLEAN DEFAULT false, verification_method TEXT,
         verification_channel_id TEXT, verification_message_id TEXT,
         unverified_role_id TEXT, verified_role_id TEXT, verification_word TEXT,
+        partnership_channel_id TEXT, partnership_review_channel_id TEXT,
+        partnership_ad TEXT, partnership_role_id TEXT,
         suggestions_channel_id TEXT, starboard_channel_id TEXT, starboard_threshold INTEGER DEFAULT 3,
         boost_message_enabled BOOLEAN DEFAULT false, boost_message TEXT, boost_channel_id TEXT,
         created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(), updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
@@ -292,6 +294,10 @@ export async function startBot(): Promise<void> {
       ALTER TABLE guild_config ADD COLUMN IF NOT EXISTS unverified_role_id TEXT;
       ALTER TABLE guild_config ADD COLUMN IF NOT EXISTS verified_role_id TEXT;
       ALTER TABLE guild_config ADD COLUMN IF NOT EXISTS verification_word TEXT;
+      ALTER TABLE guild_config ADD COLUMN IF NOT EXISTS partnership_channel_id TEXT;
+      ALTER TABLE guild_config ADD COLUMN IF NOT EXISTS partnership_review_channel_id TEXT;
+      ALTER TABLE guild_config ADD COLUMN IF NOT EXISTS partnership_ad TEXT;
+      ALTER TABLE guild_config ADD COLUMN IF NOT EXISTS partnership_role_id TEXT;
       ALTER TABLE guild_config ADD COLUMN IF NOT EXISTS suggestions_channel_id TEXT;
       ALTER TABLE guild_config ADD COLUMN IF NOT EXISTS starboard_channel_id TEXT;
       ALTER TABLE guild_config ADD COLUMN IF NOT EXISTS starboard_threshold INTEGER DEFAULT 3;

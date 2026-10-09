@@ -8,6 +8,11 @@ export interface PartnershipApplicationData {
   members: string;
   contact: string;
   advertisement: string;
+  proofStatus?: "VERIFIED" | "NOT VERIFIED" | "UNABLE TO VERIFY";
+  proofMessageId?: string;
+  proofCheckedAt?: number;
+  proofExplanation?: string;
+  postingRoleGranted?: boolean;
 }
 
 export const ticketsTable = pgTable("tickets", {

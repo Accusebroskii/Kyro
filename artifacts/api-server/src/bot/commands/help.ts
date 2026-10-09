@@ -60,6 +60,10 @@ const COMMAND_CATEGORIES: Record<
         description: "Configure the ticket system category and log",
       },
       {
+        name: "/setup partnership",
+        description: "Choose the review channel, posting channel or forum, and access role",
+      },
+      {
         name: "/setup automod",
         description: "Toggle anti-spam, anti-raid, and auto-mod",
       },
@@ -205,9 +209,9 @@ const COMMAND_CATEGORIES: Record<
     emoji: "🤝",
     commands: [
       { name: "/partnership apply", description: "Apply for a server partnership" },
-      { name: "/partnership accept", description: "Accept a partnership application" },
+      { name: "/partnership accept", description: "Staff override to grant the partner posting role" },
       { name: "/partnership deny", description: "Deny a partnership application" },
-      { name: "/partnership verify", description: "Check a partner server for Calyx's required advertisement" },
+      { name: "/partnership verify", description: "Text-search a partner server for Calyx's required ad" },
       { name: "/partnership remove", description: "Remove a partnership" },
       { name: "/support", description: "Get server support" },
       { name: "/bugreport", description: "Submit a bug report" },

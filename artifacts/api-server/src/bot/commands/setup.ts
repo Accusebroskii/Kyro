@@ -164,15 +164,20 @@ export const setupCommand = {
         )
         .addChannelOption((o) =>
           o.setName("partnership_channel")
-            .setDescription("Channel where accepted partnership ads are posted")
+            .setDescription("Text channel or forum where partners can post their ad")
             .setRequired(true)
-            .addChannelTypes(ChannelType.GuildText)
+            .addChannelTypes(ChannelType.GuildText, ChannelType.GuildForum)
+        )
+        .addRoleOption((o) =>
+          o.setName("partner_role")
+            .setDescription("Role assigned after proof passes; give it posting access in the destination")
+            .setRequired(true)
         )
         .addStringOption((o) =>
           o.setName("ad")
             .setDescription("The server partnership ad")
             .setRequired(true)
-            .setMaxLength(6000)
+            .setMaxLength(4000)
         ),
     )
     .addSubcommand((s) =>
@@ -575,12 +580,38 @@ export const setupCommand = {
       } else if (sub === "partnership") {
       const reviewChannel = interaction.options.getChannel("review_channel", true);
       const partnershipChannel = interaction.options.getChannel("partnership_channel", true);
+      const selectedRole = interaction.options.getRole("partner_role", true);
+      const partnershipRole = await interaction.guild!.roles
+        .fetch(selectedRole.id)
+        .catch(() => null);
       const ad = interaction.options.getString("ad", true);
+
+      const botMember =
+        interaction.guild?.members.me ??
+        (await interaction.guild?.members.fetchMe().catch(() => null));
+      if (
+        !partnershipRole ||
+        !botMember ||
+        !botMember.permissions.has(PermissionFlagsBits.ManageRoles) ||
+        partnershipRole.managed ||
+        botMember.roles.highest.comparePositionTo(partnershipRole) <= 0
+      ) {
+        await sendSetupReply({
+          embeds: [
+            errorEmbed(
+              "I need Manage Roles permission and my highest role must be above the selected partnership role.",
+            ),
+          ],
+          flags: MessageFlags.Ephemeral,
+        });
+        return;
+      }
 
       await db.update(guildConfigTable)
         .set({
           partnershipReviewChannelId: reviewChannel.id,
           partnershipChannelId: partnershipChannel.id,
+          partnershipRoleId: partnershipRole.id,
           partnershipAd: ad,
         })
         .where(eq(guildConfigTable.guildId, guildId));
@@ -589,7 +620,10 @@ export const setupCommand = {
         embeds: [
           successEmbed(
             "Partnership System",
-            `Review Channel: <#${reviewChannel.id}>\nPartnership Channel: <#${partnershipChannel.id}>`,
+            `Review Channel: <#${reviewChannel.id}>\n` +
+            `Posting Destination: <#${partnershipChannel.id}> (${partnershipChannel.type === ChannelType.GuildForum ? "forum" : "text channel"})\n` +
+            `Access Role: <@&${partnershipRole.id}>\n` +
+            `Give that role View Channel and Send Messages in the destination; forums also need Send Messages in Threads.`,
           ),
         ],
       });
