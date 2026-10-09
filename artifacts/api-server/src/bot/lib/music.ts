@@ -32,6 +32,7 @@ const FFMPEG_PATH =
     }
   })();
 const YTDLP_PATH = process.env.YTDLP_PATH || "yt-dlp";
+const YTDLP_JS_RUNTIME = process.env.YTDLP_JS_RUNTIME?.trim() || "node";
 const COOKIES_PATH =
   process.env.COOKIES_PATH ||
   [path.resolve(process.cwd(), "cookies.txt"), path.resolve(__dirname, "../../../cookies.txt")]
@@ -39,6 +40,14 @@ const COOKIES_PATH =
   path.resolve(process.cwd(), "cookies.txt");
 const YTDLP_DOWNLOAD_URL =
   "https://github.com/yt-dlp/yt-dlp/releases/latest/download/yt-dlp_linux";
+
+function logMusicRuntime(): void {
+  const cookiesConfigured = existsSync(COOKIES_PATH);
+  logger.info(
+    `Music runtime ready: yt-dlp=${YTDLP_PATH}; JavaScript runtime=${YTDLP_JS_RUNTIME}; ` +
+      `FFmpeg=${FFMPEG_PATH}; YouTube cookies=${cookiesConfigured ? "configured" : "not configured"}.`,
+  );
+}
 
 if (process.env.YT_COOKIES && !existsSync(COOKIES_PATH)) {
   try {
@@ -57,6 +66,7 @@ export async function ensureYtDlp(): Promise<void> {
   });
   if (available) {
     logger.info({ ytdlpPath: YTDLP_PATH }, "yt-dlp is available");
+    logMusicRuntime();
     return;
   }
   if (process.env.FORCE_YTDLP_DOWNLOAD !== "1") {
@@ -76,6 +86,7 @@ export async function ensureYtDlp(): Promise<void> {
   });
   await chmod(localPath, 0o755);
   logger.info({ localPath }, "Downloaded yt-dlp");
+  logMusicRuntime();
 }
 
 export interface Song {
@@ -129,8 +140,9 @@ function youtubeArgs(urlOrSearch: string): string[] {
   return [
     "--no-warnings",
     "--geo-bypass",
+    "--no-js-runtimes",
     "--js-runtimes",
-    "deno",
+    YTDLP_JS_RUNTIME,
     "--remote-components",
     "ejs:github",
     ...getCookiesArgs(),
@@ -169,28 +181,52 @@ function createYtDlpStream(url: string): PassThrough {
   );
   let ytStderr = "";
   let ffmpegStderr = "";
+  let failureHandled = false;
+  const fail = (source: string, code: number | null, stderr: string) => {
+    if (failureHandled) return;
+    failureHandled = true;
+    const details =
+      stderr
+        .trim()
+        .split(/\r?\n/)
+        .slice(-8)
+        .join(" | ")
+        .replace(/https?:\/\/\S+/g, "[url]")
+        .slice(0, 1200) || "no diagnostic output";
+    const message = `${source} playback failed (exit ${code ?? "unknown"}): ${details}`;
+    logger.error({ source, code, stderr: details }, message);
+    output.destroy(new Error(message));
+  };
+
   yt.stderr.on("data", (chunk: Buffer) => (ytStderr += chunk.toString()));
   ffmpeg.stderr.on("data", (chunk: Buffer) => (ffmpegStderr += chunk.toString()));
+  ffmpeg.stdin.on("error", (err: NodeJS.ErrnoException) => {
+    if (err.code !== "EPIPE") {
+      logger.warn({ err }, `FFmpeg input stream error: ${err.message}`);
+    }
+  });
   yt.stdout.pipe(ffmpeg.stdin);
   ffmpeg.stdout.pipe(output);
   yt.on("error", (err) => {
-    logger.error({ err, url }, "yt-dlp stream error");
+    logger.error({ err }, `yt-dlp stream could not start: ${err.message}`);
+    failureHandled = true;
     output.destroy(err);
   });
   ffmpeg.on("error", (err) => {
-    logger.error({ err, ffmpegPath: FFMPEG_PATH, url }, "FFmpeg spawn error");
+    logger.error(
+      { err, ffmpegPath: FFMPEG_PATH },
+      `FFmpeg could not start: ${err.message}`,
+    );
+    failureHandled = true;
     output.destroy(err);
   });
   yt.on("close", (code) => {
-    if (code !== 0)
-      logger.error({ code, url, stderr: ytStderr.trim() }, "yt-dlp playback failed");
+    if (code !== 0 && !yt.killed) fail("yt-dlp", code, ytStderr);
   });
   ffmpeg.on("close", (code) => {
-    if (code !== 0) {
-      const error = new Error(`FFmpeg exited with code ${code}`);
-      logger.error({ code, url, stderr: ffmpegStderr.trim() }, "FFmpeg playback failed");
-      output.destroy(error);
-    } else {
+    if (code !== 0 && !ffmpeg.killed) {
+      fail("FFmpeg", code, ffmpegStderr);
+    } else if (code === 0 && !output.destroyed) {
       output.end();
     }
   });
@@ -422,9 +458,33 @@ export async function joinAndPlay(
         void playNext(guild.id);
       });
       player.on("error", (err) => {
-        logger.error({ err, guildId: guild.id }, "AudioPlayer error");
+        logger.error(
+          { err, guildId: guild.id },
+          `AudioPlayer error: ${err.message}`,
+        );
         const current = queues.get(guild.id);
         if (current) {
+          const failedSong = current.songs[current.currentIndex];
+          const textChannel = current.guild.channels.cache.get(
+            current.textChannelId,
+          ) as TextChannel | undefined;
+          if (failedSong && textChannel) {
+            void textChannel
+              .send({
+                embeds: [
+                  musicEmbed(
+                    "Playback failed",
+                    `I couldn't stream **${failedSong.title}**. Skipping it.`,
+                  ),
+                ],
+              })
+              .catch((sendError) =>
+                logger.warn(
+                  { err: sendError, guildId: guild.id },
+                  "Could not notify the music channel about a failed track",
+                ),
+              );
+          }
           current.currentIndex++;
           void playNext(guild.id);
         }

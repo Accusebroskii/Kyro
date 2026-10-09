@@ -10,6 +10,7 @@ RUN pnpm --filter @workspace/api-server run build
 
 FROM base AS runtime
 ENV NODE_ENV=production
+ENV FFMPEG_PATH=/usr/bin/ffmpeg
 RUN apt-get update -qq && \
     apt-get install --no-install-recommends -y ffmpeg python3 ca-certificates curl && \
     curl -sL https://github.com/yt-dlp/yt-dlp/releases/latest/download/yt-dlp_linux -o /usr/local/bin/yt-dlp && \

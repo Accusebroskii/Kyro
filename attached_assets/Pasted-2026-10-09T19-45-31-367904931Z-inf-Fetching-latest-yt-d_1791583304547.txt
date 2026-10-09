@@ -1,0 +1,76 @@
+2026-10-09T19:45:31.367904931Z [inf]  Fetching latest yt-dlp...
+2026-10-09T19:45:31.967143048Z [inf]  yt-dlp updated: 2026.08.19
+2026-10-09T19:45:32.160695199Z [inf]  Starting Container
+2026-10-09T19:45:32.319631010Z [inf]  Server listening
+2026-10-09T19:45:32.319636390Z [err]  (node:1) Warning: SECURITY WARNING: The SSL modes 'prefer', 'require', and 'verify-ca' are treated as aliases for 'verify-full'.
+2026-10-09T19:45:32.319639690Z [err]  In the next major version (pg-connection-string v3.0.0 and pg v9.0.0), these modes will adopt standard libpq semantics, which have weaker security guarantees.
+2026-10-09T19:45:32.319642520Z [err]  
+2026-10-09T19:45:32.319646200Z [err]  To prepare for this change:
+2026-10-09T19:45:32.319649391Z [err]  - If you want the current behavior, explicitly use 'sslmode=verify-full'
+2026-10-09T19:45:32.319652601Z [err]  - If you want libpq compatibility now, use 'uselibpqcompat=true&sslmode=require'
+2026-10-09T19:45:32.319655321Z [err]  
+2026-10-09T19:45:32.319658371Z [err]  See https://www.postgresql.org/docs/current/libpq-ssl.html for libpq SSL mode definitions.
+2026-10-09T19:45:32.319661301Z [err]  (Use `node --trace-warnings ...` to show where the warning was created)
+2026-10-09T19:45:32.516584686Z [inf]  Database tables created/verified
+2026-10-09T19:45:33.131450855Z [inf]  yt-dlp is available
+2026-10-09T19:45:33.151035765Z [inf]  request completed
+2026-10-09T19:45:33.411261362Z [inf]  Discord bot logged in
+2026-10-09T19:45:33.448546385Z [inf]  Bot is ready
+2026-10-09T19:45:33.458263789Z [inf]    'automod',      'restart',    'ping',        'botinfo',
+2026-10-09T19:45:33.458273619Z [inf]    'bug',          'say',        'dm',          'setstatus',
+2026-10-09T19:45:33.458284619Z [inf]  Loaded commands: [
+2026-10-09T19:45:33.458288519Z [inf]    'fortnite',     'ban',        'kick',        'mute',
+2026-10-09T19:45:33.458294839Z [inf]    'unmute',       'warn',       'warnings',    'clearwarnings',
+2026-10-09T19:45:33.458299009Z [inf]    'timeout',      'untimeout',  'purge',       'unban',
+2026-10-09T19:45:33.458302499Z [inf]    'modlogs',      'role',       'role-all',    'slowmode',
+2026-10-09T19:45:33.458306049Z [inf]    'lock',         'unlock',     'announce',    'nick',
+2026-10-09T19:45:33.458309669Z [inf]    'snipe',        'move',       'suggest',     'remindme',
+2026-10-09T19:45:33.458312979Z [inf]    'setup',        'ticket',     'modmail',     'bugreport',
+2026-10-09T19:45:33.458316259Z [inf]    'playerreport', 'support',    'play',        'pause',
+2026-10-09T19:45:33.458319539Z [inf]    'resume',       'skip',       'stop',        'queue',
+2026-10-09T19:45:33.458323269Z [inf]    'nowplaying',   'volume',     'loop',        'shuffle',
+2026-10-09T19:45:33.458326789Z [inf]    'remove',       'disconnect', 'playlist',    '8ball',
+2026-10-09T19:45:33.458331089Z [inf]    'coinflip',     'dice',       'joke',        'cat',
+2026-10-09T19:45:33.458335209Z [inf]    'dog',          'poll',       'serverinfo',  'userinfo',
+2026-10-09T19:45:33.458341369Z [inf]    'ship',         'rps',        'wyr',         'hack',
+2026-10-09T19:45:33.458341469Z [inf]    'globalban',    'botname',    'botavatar',   'broadcast',
+2026-10-09T19:45:33.458345949Z [inf]    'roast',        'pp',         'meme',        'trivia',
+2026-10-09T19:45:33.458350889Z [inf]    'guilds',       'guild',      'addlevel',    'ai',
+2026-10-09T19:45:33.458356460Z [inf]    'partnership'
+2026-10-09T19:45:33.458358970Z [inf]    'afk',          'rank',       'leaderboard', 'giveaway',
+2026-10-09T19:45:33.458364590Z [inf]    'reactionrole', 'backup',     'createroles', 'template',
+2026-10-09T19:45:33.458365810Z [inf]  ]
+2026-10-09T19:45:33.458369490Z [inf]    'embed',        'help',       'invite',      'security',
+2026-10-09T19:45:33.779418054Z [inf]  Slash commands registered globally
+2026-10-09T19:50:44.048159021Z [inf]  Resolved cookies file
+2026-10-09T19:50:44.048162671Z [inf]  Search complete
+2026-10-09T19:50:44.048165491Z [inf]  Search query: toyoki
+2026-10-09T19:50:44.048167961Z [inf]  Songs found: [
+2026-10-09T19:50:44.048170331Z [inf]    {
+2026-10-09T19:50:44.048173091Z [inf]      title: 'Toyoki (Douyin Remix)',
+2026-10-09T19:50:44.048175531Z [inf]      url: 'https://www.youtube.com/watch?v=4QYalvUO4Us',
+2026-10-09T19:50:44.048179341Z [inf]      duration: '1:39',
+2026-10-09T19:50:44.048181891Z [inf]      thumbnail: '',
+2026-10-09T19:50:44.048184661Z [inf]      requestedBy: '',
+2026-10-09T19:50:44.048187841Z [inf]      requestedById: ''
+2026-10-09T19:50:44.048190231Z [inf]    }
+2026-10-09T19:50:44.048193381Z [inf]  ]
+2026-10-09T19:50:44.048196031Z [inf]  Resolved cookies file
+2026-10-09T19:50:44.326608035Z [inf]  yt-dlp playback failed
+2026-10-09T19:50:44.326611295Z [inf]  FFmpeg playback failed
+2026-10-09T21:30:02.209087317Z [inf]  FFmpeg playback failed
+2026-10-09T21:30:02.209129156Z [inf]  Resolved cookies file
+2026-10-09T21:30:02.209132266Z [inf]  Search complete
+2026-10-09T21:30:02.209134976Z [inf]  Search query: ghetto lil kleien
+2026-10-09T21:30:02.209137666Z [inf]  Songs found: [
+2026-10-09T21:30:02.209140406Z [inf]    {
+2026-10-09T21:30:02.209143296Z [inf]      title: 'Ghetto',
+2026-10-09T21:30:02.209146666Z [inf]      url: 'https://www.youtube.com/watch?v=9xTWGQDLq4Y',
+2026-10-09T21:30:02.209149076Z [inf]      duration: '3:18',
+2026-10-09T21:30:02.209151706Z [inf]      thumbnail: '',
+2026-10-09T21:30:02.209155676Z [inf]      requestedBy: '',
+2026-10-09T21:30:02.209158616Z [inf]      requestedById: ''
+2026-10-09T21:30:02.209161906Z [inf]    }
+2026-10-09T21:30:02.209164736Z [inf]  ]
+2026-10-09T21:30:02.209167806Z [inf]  Resolved cookies file
+2026-10-09T21:30:02.209170466Z [inf]  yt-dlp playback failed
