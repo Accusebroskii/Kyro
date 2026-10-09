@@ -43,7 +43,15 @@ export async function checkModerator(
   if (member.permissions.has(PermissionFlagsBits.ModerateMembers)) return true;
   if (member.permissions.has(PermissionFlagsBits.Administrator)) return true;
 
-  await interaction.reply({ content: "You need Moderator or Administrator permissions.", flags: MessageFlags.Ephemeral });
+  if (interaction.replied || interaction.deferred) {
+    await interaction.editReply({ content: "You need Moderator or Administrator permissions." });
+  } else {
+    await interaction.reply({
+      content: "You need Moderator or Administrator permissions.",
+      flags: MessageFlags.Ephemeral,
+    });
+  }
+
   return false;
 }
 
@@ -66,7 +74,15 @@ export async function checkAdmin(
   if (cfg?.adminRoleId && member.roles.cache.has(cfg.adminRoleId)) return true;
   if (member.permissions.has(PermissionFlagsBits.Administrator)) return true;
 
-  await interaction.reply({ content: "You need Administrator permissions.", flags: MessageFlags.Ephemeral });
+  if (interaction.replied || interaction.deferred) {
+    await interaction.editReply({ content: "You need Administrator permissions." });
+  } else {
+    await interaction.reply({
+      content: "You need Administrator permissions.",
+      flags: MessageFlags.Ephemeral,
+    });
+  }
+
   return false;
 }
 

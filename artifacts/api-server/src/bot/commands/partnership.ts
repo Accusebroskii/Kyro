@@ -160,14 +160,15 @@ export async function handlePartnershipApplyModalSubmit(
     )
     .limit(1);
 
-  if (existing[0]) {
+  const existingChannelId = existing[0]?.channelId;
+  if (existingChannelId) {
     const existingChannel = await interaction.guild.channels
-      .fetch(existing[0].channelId)
+      .fetch(existingChannelId)
       .catch(() => null);
 
     if (existingChannel) {
       await interaction.reply({
-        content: `❌ You already have a partnership ticket: <#${existing[0].channelId}>`,
+        content: `❌ You already have a partnership ticket: <#${existingChannelId}>`,
         flags: MessageFlags.Ephemeral,
       });
       return;
@@ -363,125 +364,7 @@ export const partnershipCommand = {
 
       await interaction.showModal(modal);
       return;
-
-      const [config] = await db
-        .select()
-        .from(guildConfigTable)
-        .where(eq(guildConfigTable.guildId, guildId))
-        .limit(1);
-
-      if (!config?.partnershipChannelId || !config.partnershipReviewChannelId) {
-        await interaction.reply({
-          content:
-            "❌ The partnership system is not fully configured. An administrator needs to run `/setup partnership` first.",
-          flags: MessageFlags.Ephemeral,
-        });
-        return;
       }
-
-      if (!config.partnershipAd) {
-        await interaction.reply({
-          content:
-            "❌ The partnership advertisement for this server has not been configured yet.",
-          flags: MessageFlags.Ephemeral,
-        });
-        return;
-      }
-
-      const existing = await db
-        .select()
-        .from(ticketsTable)
-        .where(
-          and(
-            eq(ticketsTable.guildId, guildId),
-            eq(ticketsTable.userId, interaction.user.id),
-            eq(ticketsTable.subject, "Partnership Application"),
-          ),
-        )
-        .limit(1);
-
-      if (existing[0]) {
-        const existingChannel = await interaction.guild.channels
-          .fetch(existing[0].channelId)
-          .catch(() => null);
-
-        if (existingChannel) {
-          await interaction.reply({
-            content: `❌ You already have a partnership ticket: <#${existing[0].channelId}>`,
-            flags: MessageFlags.Ephemeral,
-          });
-          return;
-        }
-      }
-
-      const ticket = await openTicket({
-        guildId,
-        guild: interaction.guild,
-        userId: interaction.user.id,
-        userTag: interaction.user.tag,
-        subject: "Partnership Application",
-      });
-
-      const ticketChannel = ticket.channel as TextChannel;
-
-      const calyxAd = new EmbedBuilder()
-        .setTitle("🤝 Partnership Advertisement")
-        .setDescription(config.partnershipAd)
-        .setColor(0x4f8cff);
-
-      await ticketChannel.send({
-        content:
-          `Welcome <@${interaction.user.id}>!\n\n` +
-          `Please send **proof that you sent our partnership advertisement in your partnership command**.\n\n` +
-          `📸 Upload a screenshot/image as proof below.\n\n` +
-          `Once your proof has been submitted, staff will review it.`,
-        embeds: [calyxAd],
-      });
-
-      const dataEmbed = new EmbedBuilder()
-        .setTitle("🤝 Partnership Application Data")
-        .setColor(0x4f8cff)
-        .addFields(
-          {
-            name: "Applicant ID",
-            value: interaction.user.id,
-          },
-          {
-            name: "Server",
-            value: server.slice(0, 1024),
-            inline: true,
-          },
-          {
-            name: "Members",
-            value: members.slice(0, 1024),
-            inline: true,
-          },
-          {
-            name: "Invite",
-            value: invite.slice(0, 1024),
-          },
-          {
-            name: "Contact",
-            value: contact.slice(0, 1024),
-          },
-          {
-            name: "Advertisement",
-            value: advertisement.slice(0, 1024),
-          },
-        )
-        .setFooter({ text: "Calyx Partnership Application Data" });
-
-      await ticketChannel.send({
-        embeds: [dataEmbed],
-      });
-
-      await interaction.reply({
-        content: `✅ Your partnership ticket has been created: ${ticketChannel}`,
-        flags: MessageFlags.Ephemeral,
-      });
-
-      return;
-    }
 
     // INFO
     if (subcommand === "info") {
