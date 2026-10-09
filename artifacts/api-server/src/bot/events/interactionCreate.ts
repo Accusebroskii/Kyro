@@ -37,6 +37,7 @@ import {
 } from "../commands/backup.js";
 
 import { handleTemplateModalSubmit } from "../commands/template.js";
+import { handlePartnershipApplyModalSubmit } from "../commands/partnership.js";
 import { handleCreateRolesModalSubmit } from "../commands/createroles.js";
 import { handleEmbedModalSubmit } from "../commands/embed.js";
 import { startCaptchaVerification, pendingCaptchas } from "../lib/verification.js";
@@ -416,6 +417,18 @@ export async function onInteractionCreate(interaction: Interaction): Promise<voi
       }
     }
   } catch (err) {
-    logger.error({ err }, "Unhandled interaction error");
+    logger.error(
+      {
+        err,
+        interactionId: interaction.id,
+        interactionType: interaction.type,
+        customId: "customId" in interaction ? interaction.customId : undefined,
+        commandName: interaction.isChatInputCommand()
+          ? interaction.commandName
+          : undefined,
+        stack: err instanceof Error ? err.stack : String(err),
+      },
+      "Unhandled interaction error",
+    );
   }
 }
