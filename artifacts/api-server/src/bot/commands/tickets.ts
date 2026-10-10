@@ -132,27 +132,52 @@ export async function openTicket({ guildId, guild, userId, userTag, subject, cat
 }
 
 export async function handleTicketPanelSelect(interaction: StringSelectMenuInteraction) {
-  const subject = interaction.values[0]!;
-  const { channel } = await openTicket({
-    guildId: interaction.guildId!,
-    guild: interaction.guild!,
-    userId: interaction.user.id,
-    userTag: interaction.user.tag,
-    subject,
-  });
-  await interaction.reply({ content: `Your ticket has been created: ${channel}`, flags: MessageFlags.Ephemeral });
-}
+  await interaction.deferReply({ flags: MessageFlags.Ephemeral });
 
+  const subject = interaction.values[0]!;
+
+  try {
+    const { channel } = await openTicket({
+      guildId: interaction.guildId!,
+      guild: interaction.guild!,
+      userId: interaction.user.id,
+      userTag: interaction.user.tag,
+      subject,
+    });
+
+    await interaction.editReply({
+      content: `Your ticket has been created: ${channel}`,
+    });
+  } catch (error) {
+    logger.error({ error }, "Failed to create ticket from panel");
+    await interaction.editReply({
+      content: "❌ I couldn't create your ticket. Please contact the server staff.",
+    });
+  }
+}
 export async function handleTicketCreate(interaction: ButtonInteraction) {
+  await interaction.deferReply({ flags: MessageFlags.Ephemeral });
+
   const panelName = interaction.customId.replace("ticket_create:", "");
-  const { channel } = await openTicket({
-    guildId: interaction.guildId!,
-    guild: interaction.guild!,
-    userId: interaction.user.id,
-    userTag: interaction.user.tag,
-    subject: panelName,
-  });
-  await interaction.reply({ content: `Your ticket has been created: ${channel}`, flags: MessageFlags.Ephemeral });
+
+  try {
+    const { channel } = await openTicket({
+      guildId: interaction.guildId!,
+      guild: interaction.guild!,
+      userId: interaction.user.id,
+      userTag: interaction.user.tag,
+      subject: panelName,
+    });
+
+    await interaction.editReply({
+      content: `Your ticket has been created: ${channel}`,
+    });
+  } catch (error) {
+    logger.error({ error }, "Failed to create ticket from button");
+    await interaction.editReply({
+      content: "❌ I couldn't create your ticket. Please contact the server staff.",
+    }).catch(() => {});
+  }
 }
 
 /**
