@@ -380,9 +380,11 @@ export const setupCommand = {
       await sendSetupReply({ embeds: [successEmbed("Tickets Configured", "Ticket system updated.")] });
 
       } else if (sub === "panel") {
+        await interaction.deferReply({ flags: MessageFlags.Ephemeral });
         const { sessionId, draft } = await startPanelBuilder(guildId, interaction.user.id);
-      interaction.user.id;
-      await sendSetupReply({ ...initialBuilderPayload(sessionId, draft), flags: MessageFlags.Ephemeral });
+        await interaction.editReply({
+          ...initialBuilderPayload(sessionId, draft),
+        });
 
     } else if (sub === "modmail") {
       if (interaction.user.id !== BOT_OWNER_ID) {
