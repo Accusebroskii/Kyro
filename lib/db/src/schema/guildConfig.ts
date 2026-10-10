@@ -53,6 +53,8 @@ export const guildConfigTable = pgTable("guild_config", {
   partnershipTicketCategoryId: text("partnership_ticket_category_id"),
   partnershipAd: text("partnership_ad"),
   partnershipRoleId: text("partnership_role_id"),
+  partnershipPanelChannelId: text("partnership_panel_channel_id"),
+  partnershipPanelMessageId: text("partnership_panel_message_id"),
   // Starboard
   starboardChannelId: text("starboard_channel_id"),
   starboardThreshold: integer("starboard_threshold").notNull().default(3),

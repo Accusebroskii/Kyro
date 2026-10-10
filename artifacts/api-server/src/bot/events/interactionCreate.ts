@@ -1,4 +1,5 @@
 import { MessageFlags } from "discord.js";
+import { ModalBuilder, ActionRowBuilder, TextInputBuilder, TextInputStyle } from "discord.js";
 import {
   Interaction,
   ChatInputCommandInteraction,
@@ -213,6 +214,58 @@ export async function onInteractionCreate(interaction: Interaction): Promise<voi
     // =========================
     if (interaction.isButton()) {
       const btn = interaction as ButtonInteraction;
+
+      if (btn.customId === "partnership_apply_panel") {
+        const modal = new ModalBuilder()
+          .setCustomId("partnership_apply_modal")
+          .setTitle("Partnership Application")
+          .addComponents(
+            new ActionRowBuilder<TextInputBuilder>().addComponents(
+              new TextInputBuilder()
+                .setCustomId("server")
+                .setLabel("Server Name")
+                .setStyle(TextInputStyle.Short)
+                .setRequired(true)
+                .setMaxLength(100)
+            ),
+            new ActionRowBuilder<TextInputBuilder>().addComponents(
+              new TextInputBuilder()
+                .setCustomId("invite")
+                .setLabel("Discord Invite")
+                .setStyle(TextInputStyle.Short)
+                .setRequired(true)
+                .setMaxLength(200)
+            ),
+            new ActionRowBuilder<TextInputBuilder>().addComponents(
+              new TextInputBuilder()
+                .setCustomId("members")
+                .setLabel("Member Count")
+                .setStyle(TextInputStyle.Short)
+                .setRequired(true)
+                .setMaxLength(100)
+            ),
+            new ActionRowBuilder<TextInputBuilder>().addComponents(
+              new TextInputBuilder()
+                .setCustomId("contact")
+                .setLabel("Contact")
+                .setStyle(TextInputStyle.Short)
+                .setRequired(true)
+                .setMaxLength(200)
+            ),
+            new ActionRowBuilder<TextInputBuilder>().addComponents(
+              new TextInputBuilder()
+                .setCustomId("advertisement")
+                .setLabel("Advertisement")
+                .setStyle(TextInputStyle.Paragraph)
+                .setRequired(true)
+                .setMaxLength(4000)
+                .setPlaceholder("Paste your full partnership advertisement here...")
+            )
+          );
+
+        await btn.showModal(modal);
+        return;
+      }
 
       if (btn.customId.startsWith("application:apply:")) {
         await handleApplicationApplyButton(btn);

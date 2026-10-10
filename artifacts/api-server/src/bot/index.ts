@@ -340,6 +340,8 @@ export async function startBot(): Promise<void> {
       ALTER TABLE guild_config ADD COLUMN IF NOT EXISTS partnership_review_channel_id TEXT;
       ALTER TABLE guild_config ADD COLUMN IF NOT EXISTS partnership_ad TEXT;
       ALTER TABLE guild_config ADD COLUMN IF NOT EXISTS partnership_role_id TEXT;
+      ALTER TABLE guild_config ADD COLUMN IF NOT EXISTS partnership_panel_channel_id TEXT;
+      ALTER TABLE guild_config ADD COLUMN IF NOT EXISTS partnership_panel_message_id TEXT;
       ALTER TABLE guild_config ADD COLUMN IF NOT EXISTS suggestions_channel_id TEXT;
       ALTER TABLE guild_config ADD COLUMN IF NOT EXISTS starboard_channel_id TEXT;
       ALTER TABLE guild_config ADD COLUMN IF NOT EXISTS starboard_threshold INTEGER DEFAULT 3;

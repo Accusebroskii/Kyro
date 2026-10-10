@@ -169,6 +169,12 @@ export const setupCommand = {
       s.setName("partnership")
         .setDescription("Configure the partnership system")
         .addChannelOption((o) =>
+          o.setName("panel_channel")
+            .setDescription("Text channel where the partnership application panel is posted")
+            .setRequired(true)
+            .addChannelTypes(ChannelType.GuildText)
+        )
+        .addChannelOption((o) =>
           o.setName("review_channel")
             .setDescription("Channel where partnership ads are reviewed")
             .setRequired(true)
@@ -680,6 +686,7 @@ export const setupCommand = {
       const [cfg] = await db.select().from(guildConfigTable).where(eq(guildConfigTable.guildId, guildId)).limit(1);
       await sendSetupReply({ embeds: [successEmbed("Starboard Configured", `Channel: ${cfg?.starboardChannelId ? `<#${cfg.starboardChannelId}>` : "Not set"}\nThreshold: **${cfg?.starboardThreshold ?? 3} ⭐** to get on the board`)] });
       } else if (sub === "partnership") {
+      const panelChannel = interaction.options.getChannel("panel_channel", true);
       const reviewChannel = interaction.options.getChannel("review_channel", true);
       const partnershipChannel = interaction.options.getChannel("partnership_channel", true);
       const ticketCategory = interaction.options.getChannel("ticket_category", true);
@@ -710,6 +717,67 @@ export const setupCommand = {
         return;
       }
 
+      const panelTextChannel = panelChannel as TextChannel;
+
+      const panelEmbed = new EmbedBuilder()
+        .setColor(0x4F8CFF)
+        .setTitle("🤝 Partnership Applications")
+        .setDescription(
+          "Want to become a Calyx partner? Apply using the button below.\n\n" +
+          "**How it works**\n" +
+          "1. Submit your server information and advertisement.\n" +
+          "2. Calyx opens a private application ticket.\n" +
+          "3. Post the required Calyx advertisement in your server.\n" +
+          "4. Upload a clear screenshot in your ticket.\n" +
+          "5. Calyx checks the screenshot and grants the partner role if verification passes.\n\n" +
+          "Keep your ticket open until verification is complete."
+        )
+        .setFooter({ text: "Calyx Partnerships" })
+        .setTimestamp();
+
+      const panelComponents = [
+        new ActionRowBuilder<ButtonBuilder>().addComponents(
+          new ButtonBuilder()
+            .setCustomId("partnership_apply_panel")
+            .setLabel("Apply for Partnership")
+            .setEmoji("🤝")
+            .setStyle(ButtonStyle.Primary)
+        )
+      ];
+
+      const [previousConfig] = await db
+        .select()
+        .from(guildConfigTable)
+        .where(eq(guildConfigTable.guildId, guildId))
+        .limit(1);
+
+      let existingPanelMessage = null;
+
+      if (
+        previousConfig?.partnershipPanelChannelId === panelTextChannel.id &&
+        previousConfig.partnershipPanelMessageId
+      ) {
+        const oldChannel = await interaction.guild!.channels
+          .fetch(previousConfig.partnershipPanelChannelId)
+          .catch(() => null);
+
+        if (oldChannel?.isTextBased() && "messages" in oldChannel) {
+          existingPanelMessage = await oldChannel.messages
+            .fetch(previousConfig.partnershipPanelMessageId)
+            .catch(() => null);
+        }
+      }
+
+      const panelMessage = existingPanelMessage
+        ? await existingPanelMessage.edit({
+            embeds: [panelEmbed],
+            components: panelComponents,
+          })
+        : await panelTextChannel.send({
+            embeds: [panelEmbed],
+            components: panelComponents,
+          });
+
       await db.update(guildConfigTable)
         .set({
           partnershipReviewChannelId: reviewChannel.id,
@@ -717,6 +785,8 @@ export const setupCommand = {
           partnershipTicketCategoryId: ticketCategory.id,
           partnershipRoleId: partnershipRole.id,
           partnershipAd: ad,
+          partnershipPanelChannelId: panelTextChannel.id,
+          partnershipPanelMessageId: panelMessage.id,
         })
         .where(eq(guildConfigTable.guildId, guildId));
 
@@ -724,6 +794,7 @@ export const setupCommand = {
         embeds: [
           successEmbed(
             "Partnership System",
+            `Application Panel: <#${panelTextChannel.id}>\n` +
             `Review Channel: <#${reviewChannel.id}>\n` +
             `Ticket Category: <#${ticketCategory.id}>\n` +
             `Posting Destination: <#${partnershipChannel.id}> (${partnershipChannel.type === ChannelType.GuildForum ? "forum" : "text channel"})\n` +
