@@ -101,19 +101,16 @@ export const setupCommand = {
         .addBooleanOption((o) => o.setName("automod").setDescription("Enable/disable general auto-mod")),
     )
     .addSubcommand((s) =>
-      s.setName("roles").setDescription("Set moderator and admin roles")
+      s.setName("roles").setDescription("Configure server roles and setup access")
         .addRoleOption((o) => o.setName("modrole").setDescription("Moderator role"))
         .addRoleOption((o) => o.setName("adminrole").setDescription("Admin role"))
-        .addRoleOption((o) => o.setName("muterole").setDescription("Mute role (for non-timeout mutes)")),
-    )
-    .addSubcommand((s) =>
-      s.setName("role").setDescription("Manage roles allowed to use /setup")
-        .addStringOption((o) => o.setName("action").setDescription("Add, remove, or list setup roles").setRequired(true).addChoices(
+        .addRoleOption((o) => o.setName("muterole").setDescription("Mute role (for non-timeout mutes)"))
+        .addStringOption((o) => o.setName("access_action").setDescription("Manage roles allowed to use setup commands").addChoices(
           { name: "Add", value: "add" },
           { name: "Remove", value: "remove" },
           { name: "List", value: "list" },
         ))
-        .addRoleOption((o) => o.setName("role").setDescription("Role to add or remove")),
+        .addRoleOption((o) => o.setName("access_role").setDescription("Role to grant or remove setup access")),
     )
     .addSubcommand((s) =>
       s.setName("jointovoice").setDescription("Configure join-to-create voice system")
@@ -183,6 +180,12 @@ export const setupCommand = {
             .setRequired(true)
             .addChannelTypes(ChannelType.GuildText, ChannelType.GuildForum)
         )
+        .addChannelOption((o) =>
+          o.setName("ticket_category")
+            .setDescription("Category where private partnership ticket channels are created")
+            .setRequired(true)
+            .addChannelTypes(ChannelType.GuildCategory)
+        )
         .addRoleOption((o) =>
           o.setName("partner_role")
             .setDescription("Role assigned after proof passes; give it posting access in the destination")
@@ -210,7 +213,7 @@ export const setupCommand = {
   async execute(interaction: ChatInputCommandInteraction) {
     const group = interaction.options.getSubcommandGroup(false);
     const sub = interaction.options.getSubcommand();
-    if (sub === "role" || sub === "roles") {
+    if (sub === "roles") {
       if (!(await checkAdmin(interaction))) return;
     } else {
       const guild = interaction.guild;
@@ -220,7 +223,7 @@ export const setupCommand = {
       if (!member || !(await canUseSetup(member))) {
         await interaction.reply({
           content:
-            "You need Administrator/Manage Server permission or a role configured with `/setup role` to use setup commands.",
+            "You need Administrator/Manage Server permission or a role configured with `/setup roles` to use setup commands.",
           flags: MessageFlags.Ephemeral,
         });
         return;
@@ -238,11 +241,9 @@ export const setupCommand = {
     };
 
 
-    if (sub === "role") {
-      const action = interaction.options.getString("action", true);
-      const role = interaction.options.getRole("role");
-
-      if (action === "list") {
+    if (sub === "roles") {
+      const accessAction = interaction.options.getString("access_action");
+      if (accessAction === "list") {
         const setupRoles = await listSetupAccessRoles(guildId);
         await sendSetupReply({
           embeds: [
@@ -258,45 +259,52 @@ export const setupCommand = {
         return;
       }
 
-      if (!role) {
-        await sendSetupReply({
-          embeds: [errorEmbed("Choose a role to add or remove.")],
-          flags: MessageFlags.Ephemeral,
-        });
-        return;
-      }
-      if (role.id === guildId || role.managed) {
-        await sendSetupReply({
-          embeds: [errorEmbed("Choose a normal server role, not @everyone or a managed integration role.")],
-          flags: MessageFlags.Ephemeral,
-        });
-        return;
-      }
+      if (accessAction) {
+        const role = interaction.options.getRole("access_role");
+        if (!role) {
+          await sendSetupReply({
+            embeds: [errorEmbed("Choose a role to add or remove setup access.")],
+            flags: MessageFlags.Ephemeral,
+          });
+          return;
+        }
+        if (role.id === guildId || role.managed) {
+          await sendSetupReply({
+            embeds: [
+              errorEmbed(
+                "Choose a normal server role, not @everyone or a managed integration role.",
+              ),
+            ],
+            flags: MessageFlags.Ephemeral,
+          });
+          return;
+        }
 
-      if (action === "add") {
-        await addSetupAccessRole(guildId, role.id, interaction.user.id);
-        await sendSetupReply({
-          embeds: [
-            successEmbed(
-              "Setup Role Added",
-              `Members with <@&${role.id}> can now use /setup. Only an administrator can add or remove setup roles.`,
-            ),
-          ],
-          flags: MessageFlags.Ephemeral,
-        });
-      } else {
-        await removeSetupAccessRole(guildId, role.id);
-        await sendSetupReply({
-          embeds: [
-            successEmbed(
-              "Setup Role Removed",
-              `Members with <@&${role.id}> no longer have setup access.`,
-            ),
-          ],
-          flags: MessageFlags.Ephemeral,
-        });
+        if (accessAction === "add") {
+          await addSetupAccessRole(guildId, role.id, interaction.user.id);
+          await sendSetupReply({
+            embeds: [
+              successEmbed(
+                "Setup Access Role Added",
+                `Members with <@&${role.id}> can now use setup commands. Only an administrator can change setup access roles.`,
+              ),
+            ],
+            flags: MessageFlags.Ephemeral,
+          });
+        } else {
+          await removeSetupAccessRole(guildId, role.id);
+          await sendSetupReply({
+            embeds: [
+              successEmbed(
+                "Setup Access Role Removed",
+                `Members with <@&${role.id}> no longer have setup access.`,
+              ),
+            ],
+            flags: MessageFlags.Ephemeral,
+          });
+        }
+        return;
       }
-      return;
     }
 
     const existing = await db.select().from(guildConfigTable).where(eq(guildConfigTable.guildId, guildId)).limit(1);
@@ -672,6 +680,7 @@ export const setupCommand = {
       } else if (sub === "partnership") {
       const reviewChannel = interaction.options.getChannel("review_channel", true);
       const partnershipChannel = interaction.options.getChannel("partnership_channel", true);
+      const ticketCategory = interaction.options.getChannel("ticket_category", true);
       const selectedRole = interaction.options.getRole("partner_role", true);
       const partnershipRole = await interaction.guild!.roles
         .fetch(selectedRole.id)
@@ -703,6 +712,7 @@ export const setupCommand = {
         .set({
           partnershipReviewChannelId: reviewChannel.id,
           partnershipChannelId: partnershipChannel.id,
+          partnershipTicketCategoryId: ticketCategory.id,
           partnershipRoleId: partnershipRole.id,
           partnershipAd: ad,
         })
@@ -713,6 +723,7 @@ export const setupCommand = {
           successEmbed(
             "Partnership System",
             `Review Channel: <#${reviewChannel.id}>\n` +
+            `Ticket Category: <#${ticketCategory.id}>\n` +
             `Posting Destination: <#${partnershipChannel.id}> (${partnershipChannel.type === ChannelType.GuildForum ? "forum" : "text channel"})\n` +
             `Access Role: <@&${partnershipRole.id}>\n` +
             `Give that role View Channel and Send Messages in the destination; forums also need Send Messages in Threads.`,

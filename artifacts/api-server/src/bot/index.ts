@@ -157,11 +157,13 @@ export async function startBot(): Promise<void> {
         verification_channel_id TEXT, verification_message_id TEXT,
         unverified_role_id TEXT, verified_role_id TEXT, verification_word TEXT,
         partnership_channel_id TEXT, partnership_review_channel_id TEXT,
-        partnership_ad TEXT, partnership_role_id TEXT,
+        partnership_ticket_category_id TEXT, partnership_ad TEXT, partnership_role_id TEXT,
         suggestions_channel_id TEXT, starboard_channel_id TEXT, starboard_threshold INTEGER DEFAULT 3,
         boost_message_enabled BOOLEAN DEFAULT false, boost_message TEXT, boost_channel_id TEXT,
         created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(), updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
       );
+      ALTER TABLE guild_config
+        ADD COLUMN IF NOT EXISTS partnership_ticket_category_id TEXT;
       CREATE TABLE IF NOT EXISTS tickets (
         id SERIAL PRIMARY KEY, guild_id TEXT NOT NULL, ticket_number INTEGER NOT NULL,
         user_id TEXT NOT NULL, user_tag TEXT NOT NULL, subject TEXT, channel_id TEXT,

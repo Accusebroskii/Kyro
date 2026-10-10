@@ -88,19 +88,23 @@ export const ticketCommand = {
   },
 };
 
-export async function openTicket({ guildId, guild, userId, userTag, subject }: {
+export async function openTicket({ guildId, guild, userId, userTag, subject, categoryId }: {
   guildId: string;
   guild: any;
   userId: string;
   userTag: string;
   subject: string;
+  categoryId?: string;
 }) {
   const [config] = await db.select().from(guildConfigTable).where(eq(guildConfigTable.guildId, guildId)).limit(1);
   const counter = (config?.ticketCounter ?? 0) + 1;
   await db.update(guildConfigTable).set({ ticketCounter: counter }).where(eq(guildConfigTable.guildId, guildId));
   const slug = subject.toLowerCase().replace(/\s+/g, "-").replace(/[^a-z0-9-]/g, "");
   const ticketName = `${slug}-${String(counter).padStart(4, "0")}`;
-  const category = config?.ticketCategoryId ? guild.channels.cache.get(config.ticketCategoryId) : null;
+  const ticketCategoryId = categoryId ?? config?.ticketCategoryId;
+  const category = ticketCategoryId
+    ? guild.channels.cache.get(ticketCategoryId)
+    : null;
   const channel = await guild.channels.create({
     name: ticketName,
     type: ChannelType.GuildText,

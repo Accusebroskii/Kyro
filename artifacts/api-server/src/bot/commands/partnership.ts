@@ -104,6 +104,7 @@ export async function handlePartnershipApplyModalSubmit(
     userId: interaction.user.id,
     userTag: interaction.user.tag,
     subject: "Partnership Application",
+    categoryId: config.partnershipTicketCategoryId ?? undefined,
   });
 
   const ticketChannel = ticket.channel as TextChannel;

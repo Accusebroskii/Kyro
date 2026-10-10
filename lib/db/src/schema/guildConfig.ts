@@ -50,6 +50,7 @@ export const guildConfigTable = pgTable("guild_config", {
   // Partnership system
   partnershipChannelId: text("partnership_channel_id"),
   partnershipReviewChannelId: text("partnership_review_channel_id"),
+  partnershipTicketCategoryId: text("partnership_ticket_category_id"),
   partnershipAd: text("partnership_ad"),
   partnershipRoleId: text("partnership_role_id"),
   // Starboard

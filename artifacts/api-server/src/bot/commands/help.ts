@@ -67,7 +67,7 @@ const COMMAND_CATEGORIES: Record<
         name: "/setup automod",
         description: "Toggle anti-spam, anti-raid, and auto-mod",
       },
-      { name: "/setup roles", description: "Set mod, admin, and mute roles" },
+      { name: "/setup roles", description: "Set server roles and manage setup access roles" },
       {
         name: "/setup autorole",
         description: "Add/remove/list auto-roles for new members",
