@@ -1,3 +1,4 @@
 - [Discord bot music build](discord-music-build.md) — audio packages must be esbuild externals; system FFmpeg handles transcoding
 - [DB schema rebuild rule](db-schema-rebuild.md) — rebuild TypeScript project references before leaf typechecks after schema changes
 - [Partnership approval flow](partnership-approval-flow.md) — AI checks a screenshot of Calyx’s ad, then assigns the configured posting role
+- [AI command privacy](ai-command-privacy.md) — AI settings are per-user; chat history is private, server-scoped, and limited to 12 turns

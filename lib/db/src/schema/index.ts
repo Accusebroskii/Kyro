@@ -15,3 +15,4 @@ export * from "./giveaways";
 export * from "./reminders";
 export * from "./starboardPosts";
 export * from "./suggestions";
+export * from "./ai";

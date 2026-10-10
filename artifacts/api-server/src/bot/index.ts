@@ -21,6 +21,7 @@ import { onMessageReactionAdd } from "./events/messageReactionAdd.js";
 import { onMessageReactionRemove } from "./events/messageReactionRemove.js";
 import { logger } from "../lib/logger.js";
 import { ensureYtDlp } from "./lib/music.js";
+import { getOpenRouterConfigStatus } from "./lib/ai.js";
 import { deliverDueReminders } from "./commands/utility.js";
 
 export let botClient: Client | null = null;
@@ -275,6 +276,19 @@ export async function startBot(): Promise<void> {
         id SERIAL PRIMARY KEY, guild_id TEXT NOT NULL,
         level INTEGER NOT NULL, role_id TEXT NOT NULL
       );
+      CREATE TABLE IF NOT EXISTS ai_user_settings (
+        user_id TEXT PRIMARY KEY, enabled BOOLEAN NOT NULL DEFAULT true,
+        mode TEXT NOT NULL DEFAULT 'calm', total_requests INTEGER NOT NULL DEFAULT 0,
+        created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+        updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+      );
+      CREATE TABLE IF NOT EXISTS ai_messages (
+        id SERIAL PRIMARY KEY, user_id TEXT NOT NULL, scope_id TEXT NOT NULL,
+        role TEXT NOT NULL, content TEXT NOT NULL,
+        created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+      );
+      CREATE INDEX IF NOT EXISTS ai_messages_user_scope_id_idx
+        ON ai_messages (user_id, scope_id, id);
     `);
     /* Patch columns that may be missing on existing deployments */
     await db.execute(sql`
@@ -310,6 +324,11 @@ export async function startBot(): Promise<void> {
   } catch (err) {
     logger.warn({ err }, "Table creation failed, continuing anyway");
   }
+
+  logger.info(
+    getOpenRouterConfigStatus(),
+    "OpenRouter AI configuration status",
+  );
 
   try {
     await ensureYtDlp();

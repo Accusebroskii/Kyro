@@ -1,16 +1,27 @@
 import OpenAI from "openai";
 
-const openrouter = new OpenAI({
-  apiKey: process.env.OPENROUTER_API_KEY || "missing-openrouter-key",
-  baseURL: "https://openrouter.ai/api/v1",
-});
+const OPENROUTER_BASE_URL = "https://openrouter.ai/api/v1";
 
-const MODEL = process.env.OPENROUTER_MODEL || "openrouter/free";
+export function getOpenRouterConfigStatus() {
+  return {
+    apiKeyConfigured: Boolean(process.env.OPENROUTER_API_KEY?.trim()),
+    modelConfigured: Boolean(process.env.OPENROUTER_MODEL?.trim()),
+  };
+}
 
-function ensureApiKey(): void {
-  if (!process.env.OPENROUTER_API_KEY) {
+function getOpenRouterConfig() {
+  const apiKey = process.env.OPENROUTER_API_KEY?.trim();
+  const model = process.env.OPENROUTER_MODEL?.trim();
+  if (!apiKey) {
     throw new Error("OPENROUTER_API_KEY is missing from the environment");
   }
+  if (!model) {
+    throw new Error("OPENROUTER_MODEL is missing from the environment");
+  }
+  return {
+    client: new OpenAI({ apiKey, baseURL: OPENROUTER_BASE_URL }),
+    model,
+  };
 }
 
 function getResponseText(
@@ -35,6 +46,10 @@ function parseJsonResponse(output: string): Record<string, unknown> {
 }
 
 export type AIMode = "calm" | "crazy" | "freaky";
+export type AIConversationMessage = {
+  role: "user" | "assistant";
+  content: string;
+};
 
 const MODE_PROMPTS: Record<AIMode, string> = {
   calm: `
@@ -63,13 +78,18 @@ Do not use slurs, hateful language, or threats.
 export async function askCalyxAI(
   message: string,
   mode: AIMode = "calm",
+  history: AIConversationMessage[] = [],
 ): Promise<string> {
-  ensureApiKey();
+  if (message.length > 6000) {
+    throw new Error("AI prompt exceeded its size limit");
+  }
+  const { client, model } = getOpenRouterConfig();
 
-  const response = await openrouter.chat.completions.create({
-    model: MODEL,
+  const response = await client.chat.completions.create({
+    model,
     messages: [
       { role: "system", content: MODE_PROMPTS[mode] ?? MODE_PROMPTS.calm },
+      ...history.slice(-20),
       { role: "user", content: message },
     ],
   });
@@ -81,15 +101,15 @@ export async function comparePartnershipAdvertisements(
   requiredAdvertisement: string,
   observedMessage: string,
 ): Promise<{ matches: boolean; explanation: string }> {
-  ensureApiKey();
+  const { client, model } = getOpenRouterConfig();
 
   if (requiredAdvertisement.length > 6000 || observedMessage.length > 6000) {
     throw new Error("Partnership advertisement comparison input exceeded its size limit");
   }
 
-  const response = await openrouter.chat.completions.create({
-    model: MODEL,
-    max_tokens: 180,
+  const response = await client.chat.completions.create({
+    model,
+    max_tokens: 8192,
     messages: [
       {
         role: "system",
@@ -131,7 +151,7 @@ export async function verifyPartnershipScreenshot(
   partnerServerName: string,
   imageDataUrl: string,
 ): Promise<PartnershipProofCheck> {
-  ensureApiKey();
+  const { client, model } = getOpenRouterConfig();
 
   if (
     requiredAdvertisement.length > 6000 ||
@@ -145,9 +165,9 @@ export async function verifyPartnershipScreenshot(
     throw new Error("Partnership proof must be a PNG, JPEG, or WebP image");
   }
 
-  const response = await openrouter.chat.completions.create({
-    model: MODEL,
-    max_tokens: 180,
+  const response = await client.chat.completions.create({
+    model,
+    max_tokens: 8192,
     messages: [
       {
         role: "system",

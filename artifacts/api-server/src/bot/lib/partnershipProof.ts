@@ -12,7 +12,10 @@ import {
   type PartnershipApplicationData,
 } from "@workspace/db";
 import { eq, and } from "drizzle-orm";
-import { verifyPartnershipScreenshot } from "./ai.js";
+import {
+  getOpenRouterConfigStatus,
+  verifyPartnershipScreenshot,
+} from "./ai.js";
 import { grantPartnershipPostingRole } from "./partnershipAccess.js";
 import { logger } from "../../lib/logger.js";
 
@@ -256,6 +259,7 @@ export async function handlePartnershipProof(message: Message) {
         guildId: message.guildId,
         userId: message.author.id,
         error: explanation,
+        ...getOpenRouterConfigStatus(),
       },
       "Partnership screenshot could not be verified",
     );
