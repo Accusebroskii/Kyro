@@ -87,6 +87,7 @@ import { automodCommand } from "./automod.js";
 import { guildCommand } from "./guild.js";
 import { aiCommand } from "./ai.js";
 import { partnershipCommand } from "./partnership.js";
+import { applicationCommand } from "./application.js";
 
 import {
   restartCommand,
@@ -231,6 +232,7 @@ const ALL_COMMANDS: Command[] = [
   addlevelCommand,
   aiCommand,
   partnershipCommand,
+  applicationCommand,
 ];
 
 const commandMap = new Map<string, Command>(

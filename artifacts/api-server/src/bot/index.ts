@@ -289,6 +289,32 @@ export async function startBot(): Promise<void> {
       );
       CREATE INDEX IF NOT EXISTS ai_messages_user_scope_id_idx
         ON ai_messages (user_id, scope_id, id);
+      CREATE TABLE IF NOT EXISTS setup_access_roles (
+        id SERIAL PRIMARY KEY, guild_id TEXT NOT NULL, role_id TEXT NOT NULL,
+        created_by TEXT NOT NULL, created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+        UNIQUE (guild_id, role_id)
+      );
+      CREATE INDEX IF NOT EXISTS setup_access_roles_guild_idx
+        ON setup_access_roles (guild_id);
+      CREATE TABLE IF NOT EXISTS application_forms (
+        id SERIAL PRIMARY KEY, guild_id TEXT NOT NULL, title TEXT NOT NULL,
+        description TEXT NOT NULL, panel_channel_id TEXT NOT NULL,
+        review_channel_id TEXT NOT NULL, questions JSONB NOT NULL,
+        active BOOLEAN NOT NULL DEFAULT true, created_by TEXT NOT NULL,
+        panel_message_id TEXT, created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+      );
+      CREATE INDEX IF NOT EXISTS application_forms_guild_idx
+        ON application_forms (guild_id, id);
+      CREATE TABLE IF NOT EXISTS application_submissions (
+        id SERIAL PRIMARY KEY, form_id INTEGER NOT NULL, guild_id TEXT NOT NULL,
+        user_id TEXT NOT NULL, user_tag TEXT NOT NULL, answers JSONB NOT NULL,
+        status TEXT NOT NULL DEFAULT 'pending', review_message_id TEXT,
+        submitted_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+      );
+      CREATE INDEX IF NOT EXISTS application_submissions_form_idx
+        ON application_submissions (form_id, id);
+      CREATE INDEX IF NOT EXISTS application_submissions_applicant_idx
+        ON application_submissions (guild_id, user_id);
     `);
     /* Patch columns that may be missing on existing deployments */
     await db.execute(sql`

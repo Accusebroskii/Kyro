@@ -38,6 +38,10 @@ import {
 
 import { handleTemplateModalSubmit } from "../commands/template.js";
 import { handlePartnershipApplyModalSubmit } from "../commands/partnership.js";
+import {
+  handleApplicationApplyButton,
+  handleApplicationModalSubmit,
+} from "../commands/application.js";
 import { handleCreateRolesModalSubmit } from "../commands/createroles.js";
 import { handleEmbedModalSubmit } from "../commands/embed.js";
 import { startCaptchaVerification, pendingCaptchas } from "../lib/verification.js";
@@ -139,6 +143,11 @@ export async function onInteractionCreate(interaction: Interaction): Promise<voi
     // MODALS
     // =========================
     if (interaction.isModalSubmit()) {
+      if (interaction.customId.startsWith("application:submit:")) {
+        await handleApplicationModalSubmit(interaction);
+        return;
+      }
+
       if (
         interaction.customId.startsWith("panel_slot_modal:") ||
         interaction.customId.startsWith("panel_info_modal:")
@@ -204,6 +213,11 @@ export async function onInteractionCreate(interaction: Interaction): Promise<voi
     // =========================
     if (interaction.isButton()) {
       const btn = interaction as ButtonInteraction;
+
+      if (btn.customId.startsWith("application:apply:")) {
+        await handleApplicationApplyButton(btn);
+        return;
+      }
 
       if (btn.customId === "verify_button") {
         const member = btn.member as import("discord.js").GuildMember | null;

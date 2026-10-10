@@ -19,6 +19,12 @@ import { successEmbed, errorEmbed, infoEmbed } from "../lib/embeds.js";
 import { startPanelBuilder, initialBuilderPayload } from "../lib/panelBuilder.js";
 import { generateWelcomeCard } from "../lib/welcomeCard.js";
 import { logger } from "../../lib/logger.js";
+import {
+  addSetupAccessRole,
+  canUseSetup,
+  listSetupAccessRoles,
+  removeSetupAccessRole,
+} from "../lib/setupAccess.js";
 
 const BOT_OWNER_ID = "1375707337104429088";
 
@@ -99,6 +105,15 @@ export const setupCommand = {
         .addRoleOption((o) => o.setName("modrole").setDescription("Moderator role"))
         .addRoleOption((o) => o.setName("adminrole").setDescription("Admin role"))
         .addRoleOption((o) => o.setName("muterole").setDescription("Mute role (for non-timeout mutes)")),
+    )
+    .addSubcommand((s) =>
+      s.setName("role").setDescription("Manage roles allowed to use /setup")
+        .addStringOption((o) => o.setName("action").setDescription("Add, remove, or list setup roles").setRequired(true).addChoices(
+          { name: "Add", value: "add" },
+          { name: "Remove", value: "remove" },
+          { name: "List", value: "list" },
+        ))
+        .addRoleOption((o) => o.setName("role").setDescription("Role to add or remove")),
     )
     .addSubcommand((s) =>
       s.setName("jointovoice").setDescription("Configure join-to-create voice system")
@@ -190,12 +205,28 @@ export const setupCommand = {
             .addChannelTypes(ChannelType.GuildText)
         )
     )
-    .setDefaultMemberPermissions(PermissionFlagsBits.Administrator),
+    .setDefaultMemberPermissions(null),
 
   async execute(interaction: ChatInputCommandInteraction) {
-    if (!(await checkAdmin(interaction))) return;
     const group = interaction.options.getSubcommandGroup(false);
     const sub = interaction.options.getSubcommand();
+    if (sub === "role" || sub === "roles") {
+      if (!(await checkAdmin(interaction))) return;
+    } else {
+      const guild = interaction.guild;
+      const member = guild
+        ? await guild.members.fetch(interaction.user.id).catch(() => null)
+        : null;
+      if (!member || !(await canUseSetup(member))) {
+        await interaction.reply({
+          content:
+            "You need Administrator/Manage Server permission or a role configured with `/setup role` to use setup commands.",
+          flags: MessageFlags.Ephemeral,
+        });
+        return;
+      }
+    }
+
     const guildId = interaction.guildId!;
 
     const sendSetupReply = async (payload: any) => {
@@ -206,6 +237,67 @@ export const setupCommand = {
       return interaction.reply(payload);
     };
 
+
+    if (sub === "role") {
+      const action = interaction.options.getString("action", true);
+      const role = interaction.options.getRole("role");
+
+      if (action === "list") {
+        const setupRoles = await listSetupAccessRoles(guildId);
+        await sendSetupReply({
+          embeds: [
+            infoEmbed(
+              "Setup Access Roles",
+              setupRoles.length
+                ? setupRoles.map((entry) => `<@&${entry.roleId}>`).join("\n")
+                : "No additional roles can use `/setup`.",
+            ),
+          ],
+          flags: MessageFlags.Ephemeral,
+        });
+        return;
+      }
+
+      if (!role) {
+        await sendSetupReply({
+          embeds: [errorEmbed("Choose a role to add or remove.")],
+          flags: MessageFlags.Ephemeral,
+        });
+        return;
+      }
+      if (role.id === guildId || role.managed) {
+        await sendSetupReply({
+          embeds: [errorEmbed("Choose a normal server role, not @everyone or a managed integration role.")],
+          flags: MessageFlags.Ephemeral,
+        });
+        return;
+      }
+
+      if (action === "add") {
+        await addSetupAccessRole(guildId, role.id, interaction.user.id);
+        await sendSetupReply({
+          embeds: [
+            successEmbed(
+              "Setup Role Added",
+              `Members with <@&${role.id}> can now use /setup. Only an administrator can add or remove setup roles.`,
+            ),
+          ],
+          flags: MessageFlags.Ephemeral,
+        });
+      } else {
+        await removeSetupAccessRole(guildId, role.id);
+        await sendSetupReply({
+          embeds: [
+            successEmbed(
+              "Setup Role Removed",
+              `Members with <@&${role.id}> no longer have setup access.`,
+            ),
+          ],
+          flags: MessageFlags.Ephemeral,
+        });
+      }
+      return;
+    }
 
     const existing = await db.select().from(guildConfigTable).where(eq(guildConfigTable.guildId, guildId)).limit(1);
     if (!existing[0]) {
