@@ -352,7 +352,7 @@ export async function startBot(): Promise<void> {
     `);
     logger.info("Database tables created/verified");
   } catch (err) {
-    logger.warn({ err }, "Table creation failed, continuing anyway");
+    logger.error({ err }, "Table creation failed");
   }
 
   logger.info(
