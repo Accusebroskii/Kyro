@@ -290,6 +290,6 @@ export async function deliverDueReminders(client: import("discord.js").Client): 
       }
     }
   } catch (err) {
-    logger.error({ err }, "Error checking reminders");
+    logger.error({ err }, "Error checking reminders (scheduler)");
   }
 }
